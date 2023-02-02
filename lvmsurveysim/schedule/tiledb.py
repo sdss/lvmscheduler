@@ -68,12 +68,16 @@ class TileDB(object):
         targets = TargetList(target_file='./targets.yaml')
         t = TileDB(targets)
         t.tile_targets()
+
+        ----------------
+        -- deprecated --
         OpsDB.save_tiledb(tiledb) # save to SQL
         OpsDB.save_tiledb(tiledb, fits=True, path='tiledb') # save to FITS
 
         # load a tile database, also loads the targetfile (stored as metadata in the db)
         t = OpsDB.load_tiledb()  # load from SQL
         t = OpsDB.load_tiledb(fits=True, path='tiledb')  # load from FITS
+        ----------------
 
     Attributes
     ----------
