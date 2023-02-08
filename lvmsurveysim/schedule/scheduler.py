@@ -24,7 +24,6 @@ numpy.seterr(invalid='raise')
 __all__ = ['Scheduler']
 
 
-
 class Scheduler(object):
     """Selects optimal tile from a list of targets (tile database) at a given JD
 
@@ -72,7 +71,7 @@ class Scheduler(object):
         self.zenith_avoidance = config['scheduler']['zenith_avoidance']
 
         eph = skyfield.api.load('de421.bsp')
-        self.shadow_calc = shadow_height_lib.shadow_calc(observatory_name=self.observatory, 
+        self.shadow_calc = shadow_height_lib.shadow_calc(observatory_name=self.observatory,
                                 observatory_elevation=observing_plan.location.height,
                                 observatory_lat=self.lat, observatory_lon=self.lon,
                                 eph=eph, earth=eph['earth'], sun=eph['sun'])
@@ -84,9 +83,9 @@ class Scheduler(object):
 
     def prepare_for_night(self, jd, plan, tiledb):
         """Initializes and caches various quantities to use for scheduling observations
-        for a given single JD. 
+        for a given single JD.
 
-        This method MUST be called once for each JD prior to (repeatedly) 
+        This method MUST be called once for each JD prior to (repeatedly)
         calling `get_optimal_tile()` for a sequence of JDs between dusk and dawn the same day.
 
         Parameters
@@ -119,7 +118,7 @@ class Scheduler(object):
 
         ra = self.tiledb.tile_table['RA'].data
         dec = self.tiledb.tile_table['DEC'].data
-        
+
         self.moon_to_pointings = lvmsurveysim.utils.spherical.great_circle_distance(
                                  night_plan['moon_ra'], night_plan['moon_dec'], ra, dec)
 
@@ -185,7 +184,7 @@ class Scheduler(object):
 
         if jd >= self.morning_twi or jd < self.evening_twi:
             raise LVMSurveyOpsError(f'the time {jd} is not between {self.evening_twi} and {self.morning_twi}.')
-        
+
         tdb = self.tiledb.tile_table
         if len(tdb) != len(observed):
             raise LVMSurveyOpsError(f'length of tiledb {len(tdb)} != length of observed array {len(observed)}.')
@@ -279,3 +278,50 @@ class Scheduler(object):
         return -1,0   # should never be reached
 
 
+class Atomic(object):
+    """A basic constrained wrapper around Scheduler to fill "live" or
+       "on the fly requests.
+    """
+
+    def __init__(self):
+        survey_start = 2459458
+        survey_end = 2460856
+
+        self.observing_plan = ObservingPlan(2459458, 2460856, observatory='LCO')
+        self._tiledb = None
+        self._scheduler = None
+        self._observed = None
+
+    @property
+    def tiledb(self):
+        if self._tiledb is None:
+            self._tiledb = OpsDB.load_tiledb()
+        return self._tiledb
+
+    @property
+    def scheduler(self):
+        if self._scheduler is None:
+            self._scheduler = Scheduler(self.observing_plan)
+        return self._scheduler
+
+    @property
+    def observed(self):
+        if self._observed is None:
+            self._observed = numpy.zeros(len(self.tiledb.tile_table), dtype=numpy.float)
+        return self._observed
+
+    def prepare_for_night(self, jd):
+        self._tiledb = None
+        self._observed = None
+
+        self.scheduler.prepare_for_night(jd, self.observing_plan, self.tiledb)
+
+    def next_tile(self, jd):
+        idx, current_lst, hz, alt, lunation = \
+            scheduler.get_optimal_tile(current_jd, observed)
+
+        tileid = self.tiledb['TileID'].data[idx]
+        exptime = tdb['VisitExptime'].data[observed_idx]
+        self.observed[observed_idx] += exptime
+
+        return tileid

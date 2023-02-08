@@ -10,6 +10,7 @@
 # operations database and data classes for a survey tile and a survey observation
 
 from lvmsurveysim.exceptions import LVMSurveyOpsError
+import lvmsurveysim.utils.sqlite2astropy as s2a
 
 from sdssdb.lvmdb.lvmopsdb import Tile, Observation
 
@@ -41,5 +42,20 @@ class OpsDB(object):
         '''
         Record an LVM Observation in the database.
         '''
-        return Observation.insert(TileID=TileID, ObsType=obstype,
-                                  JD=jd, LST=lst, Hz=hz, Alt=obs_alt, Lunation=lunation).execute()
+        return Observation.insert(TileID=TileID, JD=jd, LST=lst, Hz=hz,
+                                  Alt=obs_alt, Lunation=lunation).execute()
+
+    @classmethod
+   def upload_tiledb(cls, tiledb):
+      """
+      Saves a tile table to the operations database, optionally into a FITS table.
+      The default is to update the tile database in SQL. No parameters are needed in 
+      this case.
+      Parameters
+      ----------
+      tiledb : `~lvmsurveysim.scheduler.TileDB`
+         The instance of a tile database to save
+      """
+      tile_table = tiledb.tile_table
+      s = s2a.astropy2peewee(tile_table, Tile, replace=True)
+      return s
