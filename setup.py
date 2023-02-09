@@ -21,9 +21,9 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-requirements_file = os.path.join(os.path.dirname(__file__), 'requirements.txt')
-install_requires = [line.strip().replace('==', '>=') for line in open(requirements_file)
-                    if not line.strip().startswith('#') and line.strip() != '']
+# requirements_file = os.path.join(os.path.dirname(__file__), 'requirements.txt')
+# install_requires = [line.strip().replace('==', '>=') for line in open(requirements_file)
+                    # if not line.strip().startswith('#') and line.strip() != '']
 
 NAME = 'lvmsurveysim'
 # do not use x.x.x-dev.  things complain.  instead use x.x.xdev
@@ -42,7 +42,6 @@ def run():
           author_email='gallegoj@uw.edu',
           keywords='LVM simulation survey scheduling',
           url='https://github.com/sdss/lvmsurveysim',
-          install_requires=install_requires,
           include_package_data=True,
           packages=find_packages(),
           # package_dir={'': './'},

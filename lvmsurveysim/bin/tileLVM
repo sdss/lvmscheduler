@@ -1,0 +1,17 @@
+#! /usr/bin/env python
+
+import os
+
+from lvmsurveysim.schedule import TileDB
+from lvmsurveysim.target import TargetList
+
+prod_dir = os.path.abspath(__file__).split("/bin/tileLVM")[0]
+target_file = os.path.join(prod_dir, 'etc/target_test.yaml')
+# Creates a list of targets/
+targets = TargetList(target_file=target_file)
+
+# Alternatively, tile the survey
+print('Tiling Survey ...')
+tiledb = TileDB(targets)
+tiledb.tile_targets()
+# OpsDB.save_tiledb(tiledb)

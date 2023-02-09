@@ -12,7 +12,7 @@
 from lvmsurveysim.exceptions import LVMSurveyOpsError
 import lvmsurveysim.utils.sqlite2astropy as s2a
 
-from sdssdb.lvmdb.lvmopsdb import Tile, Observation
+from sdssdb.peewee.lvmdb.lvmopsdb import Tile, Observation
 
 # ########
 # TODO: both of these methods will be using additional new tables
@@ -46,16 +46,16 @@ class OpsDB(object):
                                   Alt=obs_alt, Lunation=lunation).execute()
 
     @classmethod
-   def upload_tiledb(cls, tiledb):
-      """
-      Saves a tile table to the operations database, optionally into a FITS table.
-      The default is to update the tile database in SQL. No parameters are needed in 
-      this case.
-      Parameters
-      ----------
-      tiledb : `~lvmsurveysim.scheduler.TileDB`
-         The instance of a tile database to save
-      """
-      tile_table = tiledb.tile_table
-      s = s2a.astropy2peewee(tile_table, Tile, replace=True)
-      return s
+    def upload_tiledb(cls, tiledb):
+        """
+        Saves a tile table to the operations database, optionally into a FITS table.
+        The default is to update the tile database in SQL. No parameters are needed in 
+        this case.
+        Parameters
+        ----------
+        tiledb : `~lvmsurveysim.scheduler.TileDB`
+            The instance of a tile database to save
+        """
+        tile_table = tiledb.tile_table
+        s = s2a.astropy2peewee(tile_table, Tile, replace=True)
+        return s
