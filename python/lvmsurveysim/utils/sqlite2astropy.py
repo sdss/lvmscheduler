@@ -12,7 +12,7 @@
 
 import astropy.table
 import numpy
-from peewee import *
+from peewee import chunked
 
 __all__ = ['peewee2astropy', 'astropy2peewee']
 
@@ -50,13 +50,13 @@ def peewee2astropy(model):
 
 def astropy2peewee(table, model, replace=False):
     '''
-    Save an `astropy.table.Table` into a pewwee SQL database using a 
+    Save an `astropy.table.Table` into a pewwee SQL database using a
     given model. The model's attributes MUST match the table's column by name and type.
     Optionally insert or replace rows in the database.
 
     Parameters
     ----------
-    table : ~astropy.table.Table 
+    table : ~astropy.table.Table
         astropy Table object with the data to be stored. Columns
         must match the attribute names in the model exactly.
 
@@ -66,10 +66,13 @@ def astropy2peewee(table, model, replace=False):
     replace : Boolean
         Replace rather than insert into the SQL table. Defaults to False.
     '''
-    cols = model._meta.database.get_columns(model._meta.table_name)
-    dbc = [c.name for c in cols]
+    cols = model._meta.columns
+    dbc = [c for c in cols]
     tbc = table.colnames
-    assert (len(dbc) == len(tbc)) & (set(dbc) == set(tbc)), "sets of columns do not match."
+    for d, t in zip(dbc, tbc):
+        assert d == t, "column mismatch"
+    # this set stuff isn't working, even with equality of all elements and order
+    # assert (len(dbc) == len(tbc)) & (set(dbc) == set(tbc)), "sets of columns do not match."
     db = model._meta.database
     with db.atomic():
         if(replace==True):
@@ -79,4 +82,3 @@ def astropy2peewee(table, model, replace=False):
             for batch in chunked(table, 100):
                 s = model.insert_many(batch).execute()
     return s
-

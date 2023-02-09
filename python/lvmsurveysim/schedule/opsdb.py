@@ -12,11 +12,16 @@
 from lvmsurveysim.exceptions import LVMSurveyOpsError
 import lvmsurveysim.utils.sqlite2astropy as s2a
 
+from sdssdb.peewee.lvmdb import database
+
+database.become_admin()
+
 from sdssdb.peewee.lvmdb.lvmopsdb import Tile, Observation
 
 # ########
 # TODO: both of these methods will be using additional new tables
 # ########
+
 
 class OpsDB(object):
     """
@@ -32,8 +37,8 @@ class OpsDB(object):
         '''
         Update the tile Status column in the tile database.
         '''
-        s = Tile.update({Tile.Status:status}).where(Tile.TileID==tileid).execute()
-        if s==0:
+        s = Tile.update({Tile.Status: status}).where(Tile.TileID == tileid).execute()
+        if s == 0:
             raise LVMSurveyOpsError('Attempt to set status on unknown TildID '+str(tileid))
         return s
 
@@ -46,7 +51,7 @@ class OpsDB(object):
                                   Alt=obs_alt, Lunation=lunation).execute()
 
     @classmethod
-    def upload_tiledb(cls, tiledb):
+    def upload_tiledb(cls, tiledb=None, tile_table=None):
         """
         Saves a tile table to the operations database, optionally into a FITS table.
         The default is to update the tile database in SQL. No parameters are needed in 
@@ -55,7 +60,12 @@ class OpsDB(object):
         ----------
         tiledb : `~lvmsurveysim.scheduler.TileDB`
             The instance of a tile database to save
+        tile_table: astrop table to upload
         """
-        tile_table = tiledb.tile_table
+
+        assert tiledb or tile_table, "must pass something to upload"
+
+        if not tile_table:
+            tile_table = tiledb.tile_table
         s = s2a.astropy2peewee(tile_table, Tile, replace=True)
         return s

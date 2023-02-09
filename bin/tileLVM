@@ -1,17 +1,63 @@
 #! /usr/bin/env python
 
 import os
+import argparse
+
+from astropy.table import Table
 
 from lvmsurveysim.schedule import TileDB
 from lvmsurveysim.target import TargetList
+from lvmsurveysim.schedule import OpsDB
 
-prod_dir = os.path.abspath(__file__).split("/bin/tileLVM")[0]
-target_file = os.path.join(prod_dir, 'etc/target_test.yaml')
-# Creates a list of targets/
-targets = TargetList(target_file=target_file)
 
-# Alternatively, tile the survey
-print('Tiling Survey ...')
-tiledb = TileDB(targets)
-tiledb.tile_targets()
-# OpsDB.save_tiledb(tiledb)
+def tile(target_file):
+    # Creates a list of targets/
+    targets = TargetList(target_file=target_file)
+    # Alternatively, tile the survey
+    print('Tiling Survey ...')
+    tiledb = TileDB(targets)
+    tiledb.tile_targets()
+    return tiledb
+
+
+def write(table=None, path=None, target_file=None):
+    assert table or target_file, "must pass astropy table or path to target yaml"
+    if not table:
+        tiledb = tile(target_file)
+        table = tiledb.tile_table
+        if path:
+            tiledb.tile_table.write(path+'.fits', format='fits', overwrite=True)
+    OpsDB.upload_tiledb(tile_table=table)
+
+
+if __name__ == "__main__":
+    usage = "tileLVM"
+    description = "tile LVM from yaml or astropy table"
+    parser = argparse.ArgumentParser(description=description, usage=usage)
+    parser.add_argument("-f", "--fits", dest="fits", type=str,
+                        required=False, help="path to fits file",
+                        default=None)
+    parser.add_argument("-t", "--target", dest="target", type=str,
+                        required=False, help="path to target yaml")
+    parser.add_argument("-p", "--path", dest="path", type=str,
+                        required=False, help="path for output fits, no output if unspecified",
+                        default=None)
+
+    args = parser.parse_args()
+    fits = args.fits
+    target = args.target
+    path = args.path
+
+    table = None
+
+    if not target:
+        prod_dir = os.path.abspath(__file__).split("/bin/tileLVM")[0]
+        target_file = os.path.join(prod_dir, 'python/lvmsurveysim/etc/target_test.yaml')
+    else:
+        target_file = target
+
+    if fits:
+        table = Table.read(fits)
+        target_file = None
+
+    write(table=table, path=path, target_file=target_file)

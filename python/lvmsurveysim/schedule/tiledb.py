@@ -34,32 +34,30 @@ numpy.seterr(invalid='raise')
 
 __all__ = ['TileDB']
 
-
-
 class TileDB(object):
-    """Database holding a list of tiles to observe. Persistence is provided 
+    """Database holding a list of tiles to observe. Persistence is provided
     through the OpsDB interface. The operations SQL database is the default.
     FITS tables are optional for simulations and development work.
 
-    Internally, we hold the database as a `~astropy.table.Table` to make operations 
+    Internally, we hold the database as a `~astropy.table.Table` to make operations
     on columns (which dominate scheduling) most efficient.
 
     There are a few special TileIDs that describe virtual Tiles, such as
     the dome flat screen, a test exposure, and a NONE Tile. These allow for a strong
-    relationship between the Tile database and the Observation database, such that 
+    relationship between the Tile database and the Observation database, such that
     each Observation points to exactly one Tile. The special Tiles occupy the
     TileIDs below the configuration parameter 'tileid_start', while the survey
     tiles start with 'tileid_start' and extend to higher numbers.
 
     The tile database also stores some metadata about the Tiles, among others the
-    path of the target description file used to generate the tiles, the md5 
-    checksum of that file (which is compared against the loaded target list to 
+    path of the target description file used to generate the tiles, the md5
+    checksum of that file (which is compared against the loaded target list to
     ensure compatibility) and the tileid_start value. These metadata are stored
     in a separate table in SQL, or as FITS header keywords in the FITS files.
 
-    This class also offers methods for tiling a survey and visualizing the 
+    This class also offers methods for tiling a survey and visualizing the
     results. When tiling a set of targets, tiles in overlapping targets are
-    assigned to a target according to target priority, and if (one of) the 
+    assigned to a target according to target priority, and if (one of) the
     overlapping targets is sparse, by density such that targets of higher priority
     and higher density retain ownership of overlapping tiles.
 
@@ -113,13 +111,12 @@ class TileDB(object):
         assert isinstance(targets, lvmsurveysim.target.TargetList), "TargetList object expected in ctor of TileDB"
         self.targets = targets    # instance of lvmsurveysim.target.TargetList
         self.tiles = None         # dict of target-number to list of lvmsurveysim.target.Tile
-        self.tile_table = tile_tab# will hold astropy.Table of tile data
+        self.tile_table = tile_tab # will hold astropy.Table of tile data
         self.tileid_start = tileid_start or int(config['tiledb']['tileid_start']) # start value for tile ids
         assert self.tileid_start > -1, "tileid_start value invalid, must be 0 or greater integer"
 
     def __repr__(self):
         return (f'<TileDB (N_tiles={len(self.tile_table)})>')
-
 
     def tile_targets(self, ifu=None):
         '''
@@ -157,14 +154,13 @@ class TileDB(object):
             if t.tile_union == None:
                 # if we have not tiled the target yet as part of a tile union, tile now
                 t.tile(ifu=self.ifu, to_frame='icrs')
-            self.tiles[i] = t.make_tiles() # populate the tile database with Tile rows
+            self.tiles[i] = t.make_tiles()  # populate the tile database with Tile rows
 
         # Remove pointings that overlap with other regions.
         self._remove_overlap()
 
         # create the tile table and calculate/record all the necessary data
         self._create_tile_table()
-
 
     def update_status(self, tileid, status):
         """
@@ -186,7 +182,6 @@ class TileDB(object):
         s = opsdb.OpsDB.update_tile_status(tileid, status)
         assert s==1, 'Database error, more than one tileid updated.'
         self.tile_table['Status'][idx] = status
-
 
     def plot(self, target=None, projection='mollweide', fast=False, annotate=False, alpha=0.75):
         """Plots the tiled survey pointings.
@@ -229,9 +224,9 @@ class TileDB(object):
 
         if fast is True:
             if projection == 'mollweide':
-                x,y = convert_to_mollweide(data['RA'], data['DEC'])
+                x, y = convert_to_mollweide(data['RA'], data['DEC'])
             else:
-                x,y = data['RA'], data['DEC']
+                x, y = data['RA'], data['DEC']
             tt = [target.name for target in self.targets]
             g = numpy.array([tt.index(i) for i in data['Target']], dtype=float)
             ax.scatter(x, y, c=g % 19, s=0.05, edgecolor=None, edgecolors=None, cmap='tab20')
@@ -260,12 +255,11 @@ class TileDB(object):
 
         return fig
 
-
     def _create_tile_table(self):
         '''
         Collect tile data and reformat into an `~astropy.Table~ instance.
 
-        '''        
+        '''      
         # Sorted list of target numbers which we will use to create master arrays of data we need
         # for scheduling
         s = sorted(self.tiles)
@@ -323,21 +317,22 @@ class TileDB(object):
              for idx in s])
 
         # status flags for the tiles
-        status = numpy.full(len(tileid), 0, dtype=numpy.int64)
+        # deprecated for production
+        # status = numpy.full(len(tileid), 0, dtype=numpy.int64)
 
         # create astropy table with all the data
         self.tile_table = astropy.table.Table(
-            [tileid, target_idx, target, telescope, ra, dec, tile_pa, target_prio, tile_prio, 
-            max_airmass_to_target, max_lunation, min_shadowheight_to_target, min_moon_to_target, 
-            target_exposure_times, exposure_quantums, status],
-            names=['TileID', 'TargetIndex', 'Target', 'Telescope', 'RA', 'DEC', 'PA', 'TargetPriority', 'TilePriority', 
-                   'AirmassLimit', 'LunationLimit', 'HzLimit', "MoonDistanceLimit",
-                   'TotalExptime', 'VisitExptime', 'Status'])
-
+            [tileid, target_idx, target, telescope, ra, dec, tile_pa, target_prio, tile_prio,
+             max_airmass_to_target, max_lunation, min_shadowheight_to_target, min_moon_to_target,
+             target_exposure_times, exposure_quantums],
+            names=['tile_id', 'target_index', 'target', 'telescope', 'ra', 'dec',
+                   'pa', 'target_priority', 'tile_priority','airmass_limit',
+                   'lunation_limit', 'hz_limit', "moon_distance_limit",
+                   'total_exptime', 'visit_exptime'])
 
     def _remove_overlap(self):
         '''
-        Calculate and remove tiles in overlapping target regions. 
+        Calculate and remove tiles in overlapping target regions.
 
         Tile retention rules for two overlapping targets are given by
         ._overlap_matrix`.
@@ -359,12 +354,11 @@ class TileDB(object):
                 warnings.warn(f'target {tname} completely overlaps with other '
                                 'targets with higher priority.', LVMSurveyOpsWarning)
 
-
     def _overlap_matrix(self, poly_i, poly_j, target_i, target_j):
-        """ Compute whether two targets overlap geometrically, and if so whether 
+        """ Compute whether two targets overlap geometrically, and if so whether
         target_i's tiles should be picked over target_j's tiles.
 
-        The rules are that if the targets overlap geometrically, 
+        The rules are that if the targets overlap geometrically,
             (a) the higher priority tiles will win if both targets are not sparse.
             (b) if one of the targets is sparse and the other is not, the dense one wins
             (c) if both are sparse, the higher density wins
@@ -397,7 +391,6 @@ class TileDB(object):
         if (i_sparse != j_sparse):
             return i_dens >= j_dens
 
-
     def _get_overlap(self, verbose_level=1):
         """Returns a dictionary of masks with the overlap between regions."""
 
@@ -413,7 +406,7 @@ class TileDB(object):
         for idx in s:
             overlap[self.targets[idx].name] = {}
             overlap[self.targets[idx].name]['global_no_overlap'] = numpy.ones(len(self.tiles[idx]),
-                                                            dtype=numpy.bool)
+                                                                              dtype=numpy.bool_)
 
         # With all the dictionaries created overlap[target_name] we can now store overlap information between targets
         for idx in s:
