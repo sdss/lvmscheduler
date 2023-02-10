@@ -33,8 +33,8 @@ def peewee2astropy(model):
         astropy Table object with the data from the database table. Column
         names match the attribute names in the model.
     '''
-    cols = model._meta.database.get_columns(model._meta.table_name)
-    cnames = [c.name for c in cols]
+    cols = model._meta.columns
+    cnames = [c for c in cols]
 
     cursor = model._meta.database.execute_sql('SELECT * from '+model._meta.table_name)
     results = cursor.fetchall()

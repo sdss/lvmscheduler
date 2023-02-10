@@ -8,6 +8,8 @@
 
 
 # operations database and data classes for a survey tile and a survey observation
+import pandas as pd
+from astropy.table import Table
 
 from lvmsurveysim.exceptions import LVMSurveyOpsError
 import lvmsurveysim.utils.sqlite2astropy as s2a
@@ -69,3 +71,17 @@ class OpsDB(object):
             tile_table = tiledb.tile_table
         s = s2a.astropy2peewee(tile_table, Tile, replace=True)
         return s
+
+    @classmethod
+    def load_tiledb(cls, version=None):
+        """
+        Load tile table, save version for later.
+
+        TODO: connect to other tables to get completion, etc?
+        """
+
+        allRows = Tile.select().dicts()
+
+        dataframe = pd.DataFrame(allRows)
+
+        return Table.from_pandas(dataframe)

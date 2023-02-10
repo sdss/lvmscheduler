@@ -8,7 +8,7 @@
 import numpy
 
 import lvmsurveysim.target
-from lvmsurveysim.schedule.tiledb import TileDB
+from lvmsurveysim.schedule.opsdb import OpsDB
 from lvmsurveysim.schedule.plan import ObservingPlan
 from lvmsurveysim import config
 from lvmsurveysim.exceptions import LVMSurveyOpsError
@@ -76,10 +76,8 @@ class Scheduler(object):
                                 observatory_lat=self.lat, observatory_lon=self.lon,
                                 eph=eph, earth=eph['earth'], sun=eph['sun'])
 
-
     def __repr__(self):
         return (f'<Scheduler (observing_plans={self.observatory})> ')
-
 
     def prepare_for_night(self, jd, plan, tiledb):
         """Initializes and caches various quantities to use for scheduling observations
@@ -100,13 +98,14 @@ class Scheduler(object):
 
         """
 
-        assert isinstance(tiledb, TileDB), 'tiledb must be a lvmsurveysim.schedule.tiledb.TileDB instances.'
+        # No. Just make tiledb an astropy table
+        # assert isinstance(tiledb, TileDB), 'tiledb must be a lvmsurveysim.schedule.tiledb.TileDB instances.'
         self.tiledb = tiledb
 
         assert isinstance(plan, ObservingPlan), \
             'one of the items in observing_plans is not an instance of ObservingPlan.'
 
-        self.maxpriority = max([t.priority for t in tiledb.targets])
+        self.maxpriority = max([t for t in tiledb["target_priority"].data])
 
         night_plan = plan[plan['JD'] == jd]
         self.evening_twi = night_plan['evening_twilight'][0]
@@ -116,8 +115,8 @@ class Scheduler(object):
         # for the night for speed.
         self.lunation = night_plan['moon_phase'][0]
 
-        ra = self.tiledb.tile_table['RA'].data
-        dec = self.tiledb.tile_table['DEC'].data
+        ra = self.tiledb['ra'].data
+        dec = self.tiledb['dec'].data
 
         self.moon_to_pointings = lvmsurveysim.utils.spherical.great_circle_distance(
                                  night_plan['moon_ra'], night_plan['moon_dec'], ra, dec)
@@ -129,13 +128,12 @@ class Scheduler(object):
         self.ac = AltitudeCalculator(ra, dec, self.lon, self.lat)
 
         # convert airmass to altitude, we'll work in altitude space for efficiency
-        tdb = self.tiledb.tile_table
-        self.min_alt_for_target = 90.0 - numpy.rad2deg(numpy.arccos(1.0 / tdb['AirmassLimit'].data))
+        self.min_alt_for_target = 90.0 - numpy.rad2deg(numpy.arccos(1.0 / self.tiledb['airmass_limit'].data))
 
         # Select targets that are above the max airmass and with good
         # moon avoidance.
-        self.moon_ok = (self.moon_to_pointings > tdb['MoonDistanceLimit'].data) & (self.lunation <= tdb['LunationLimit'].data)
-
+        self.moon_ok = (self.moon_to_pointings > self.tiledb['moon_distance_limit'].data)\
+                     & (self.lunation <= self.tiledb['lunation_limit'].data)
 
     def get_optimal_tile(self, jd, observed):
         """Returns the next tile to observe at a given (float) jd.
@@ -149,7 +147,7 @@ class Scheduler(object):
         lunation, zenith distance, airmass, moon distance and shadow height.
         If there are tiles that have > 0 but less than the required visits, choose those
         otherwise choose from the target with the highest priority.
-        If the target's tiling strategy assigns tile priorities, choose the tile with the 
+        If the target's tiling strategy assigns tile priorities, choose the tile with the
         hightest priority otherwise choose the one with the highest airmass.
 
         Parameters
@@ -185,7 +183,7 @@ class Scheduler(object):
         if jd >= self.morning_twi or jd < self.evening_twi:
             raise LVMSurveyOpsError(f'the time {jd} is not between {self.evening_twi} and {self.morning_twi}.')
 
-        tdb = self.tiledb.tile_table
+        tdb = self.tiledb
         if len(tdb) != len(observed):
             raise LVMSurveyOpsError(f'length of tiledb {len(tdb)} != length of observed array {len(observed)}.')
 
@@ -197,7 +195,7 @@ class Scheduler(object):
 
         # Get the altitude at the start and end of the proposed exposure.
         alt_start = self.ac(lst=lst)
-        alt_end = self.ac(lst=(lst + (tdb['VisitExptime'].data / 3600.)))
+        alt_end = self.ac(lst=(lst + (tdb['visit_exptime'].data / 3600.)))
 
         # avoid the zenith!
         alt_ok = (alt_start < (90 - self.zenith_avoidance)) & (alt_end < (90 - self.zenith_avoidance))
@@ -206,7 +204,7 @@ class Scheduler(object):
         airmass_ok = ((alt_start > self.min_alt_for_target) & (alt_end > self.min_alt_for_target))
 
         # Gets pointings that haven't been completely observed
-        exptime_ok = observed < tdb['TotalExptime'].data
+        exptime_ok = observed < tdb['total_exptime'].data
 
         # Creates a mask of viable pointings with correct Moon avoidance,
         # airmass, zenith avoidance and that have not been completed.
@@ -216,7 +214,7 @@ class Scheduler(object):
         hz = numpy.full(len(alt_ok), 0.0)
         hz_valid = self.shadow_calc.get_heights(return_heights=True, mask=valid_mask, unit="km")
         hz[valid_mask] = hz_valid
-        hz_ok = (hz > tdb['HzLimit'].data)
+        hz_ok = (hz > tdb['hz_limit'].data)
 
         # add shadow height to the viability criteria of the pointings to create the final 
         # subset that are candidates for observation
@@ -227,10 +225,10 @@ class Scheduler(object):
             return -1, lst, 0, 0, self.lunation
 
         # Find observations that have nonzero exposure but are incomplete
-        incomplete = (observed > 0) & (observed < tdb['TotalExptime'].data)
+        incomplete = (observed > 0) & (observed < tdb['total_exptime'].data)
 
-        target_priorities = tdb['TargetPriority'].data
-        tile_priorities = tdb['TilePriority'].data
+        target_priorities = tdb['target_priority'].data
+        tile_priorities = tdb['tile_priority'].data
 
         # Gets the coordinates, altitudes, and priorities of possible pointings.
         valid_alt = alt_start[valid_idx]
@@ -275,12 +273,12 @@ class Scheduler(object):
             return observed_idx, lst, hz[observed_idx], obs_alt, self.lunation
 
         assert False, "Unreachable code!"
-        return -1,0   # should never be reached
+        return -1, 0   # should never be reached
 
 
 class Atomic(object):
-    """A basic constrained wrapper around Scheduler to fill "live" or
-       "on the fly requests.
+    """A basic, constrained wrapper around Scheduler to fill "live" or
+       "on the fly" requests.
     """
 
     def __init__(self):
@@ -307,7 +305,7 @@ class Atomic(object):
     @property
     def observed(self):
         if self._observed is None:
-            self._observed = numpy.zeros(len(self.tiledb.tile_table), dtype=numpy.float)
+            self._observed = numpy.zeros(len(self.tiledb), dtype=numpy.float64)
         return self._observed
 
     def prepare_for_night(self, jd):
@@ -318,10 +316,10 @@ class Atomic(object):
 
     def next_tile(self, jd):
         idx, current_lst, hz, alt, lunation = \
-            scheduler.get_optimal_tile(current_jd, observed)
+            self.scheduler.get_optimal_tile(jd, self.observed)
 
-        tileid = self.tiledb['TileID'].data[idx]
-        exptime = tdb['VisitExptime'].data[observed_idx]
-        self.observed[observed_idx] += exptime
+        tileid = self.tiledb['tile_id'].data[idx]
+        exptime = self.tiledb['visit_exptime'].data[idx]
+        self.observed[idx] += exptime
 
         return tileid

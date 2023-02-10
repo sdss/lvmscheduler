@@ -1,0 +1,11 @@
+#! /usr/bin/env python
+
+from lvmsurveysim.schedule.scheduler import Atomic
+
+sched = Atomic()
+
+sched.prepare_for_night(2459460)
+
+current_jd = sched.scheduler.evening_twi
+
+print(sched.next_tile(current_jd))
