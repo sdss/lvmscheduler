@@ -70,7 +70,8 @@ class Scheduler(object):
 
         self.zenith_avoidance = config['scheduler']['zenith_avoidance']
 
-        eph = skyfield.api.load('de421.bsp')
+        load = skyfield.api.Loader("/home/sdss5/config/skyfield-data")
+        eph = load('de421.bsp')
         self.shadow_calc = shadow_height_lib.shadow_calc(observatory_name=self.observatory,
                                 observatory_elevation=observing_plan.location.height,
                                 observatory_lat=self.lat, observatory_lon=self.lon,

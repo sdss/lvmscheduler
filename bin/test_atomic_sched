@@ -8,4 +8,6 @@ sched.prepare_for_night(2459460)
 
 current_jd = sched.scheduler.evening_twi
 
+print(current_jd)
+
 print(sched.next_tile(current_jd))
