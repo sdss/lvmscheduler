@@ -5,7 +5,7 @@
 # @Filename: tiledb.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import numpy
+import numpy as np
 
 import lvmsurveysim.target
 from lvmsurveysim.schedule.opsdb import OpsDB
@@ -18,7 +18,7 @@ import skyfield.api
 from lvmsurveysim.utils import shadow_height_lib
 
 
-numpy.seterr(invalid='raise')
+np.seterr(invalid='raise')
 
 
 __all__ = ['Scheduler']
@@ -34,10 +34,10 @@ class Scheduler(object):
     >>>    scheduler = Scheduler(plan)
 
     >>>    # observed exposure time for each pointing
-    >>>    observed = numpy.zeros(len(tiledb), dtype=numpy.float)
+    >>>    observed = np.zeros(len(tiledb), dtype=np.float)
 
     >>>    # range of dates for the survey
-    >>>    dates = range(numpy.min(plan['JD']), numpy.max(plan['JD']) + 1)
+    >>>    dates = range(np.min(plan['JD']), np.max(plan['JD']) + 1)
 
     >>>    for jd in dates:
     >>>        scheduler.prepare_for_night(jd, plan, tiledb)
@@ -129,7 +129,7 @@ class Scheduler(object):
         self.ac = AltitudeCalculator(ra, dec, self.lon, self.lat)
 
         # convert airmass to altitude, we'll work in altitude space for efficiency
-        self.min_alt_for_target = 90.0 - numpy.rad2deg(numpy.arccos(1.0 / self.tiledb['airmass_limit'].data))
+        self.min_alt_for_target = 90.0 - np.rad2deg(np.arccos(1.0 / self.tiledb['airmass_limit'].data))
 
         # Select targets that are above the max airmass and with good
         # moon avoidance.
@@ -157,7 +157,7 @@ class Scheduler(object):
             The Julian Date to schedule. Must be between evening and morning twilight according
             to the observing plan.
 
-        observed : ~numpy.array
+        observed : ~np.array
             Same length as len(tiledb).
             Array containing the exposure time already executed for each tile in the tiledb.
             This is used to keep track of which tiles need additional time and which are completed.
@@ -212,14 +212,14 @@ class Scheduler(object):
         valid_mask = alt_ok & self.moon_ok & airmass_ok & exptime_ok
 
         # calculate shadow heights, but only for the viable pointings since it is a costly computation
-        hz = numpy.full(len(alt_ok), 0.0)
+        hz = np.full(len(alt_ok), 0.0)
         hz_valid = self.shadow_calc.get_heights(return_heights=True, mask=valid_mask, unit="km")
         hz[valid_mask] = hz_valid
         hz_ok = (hz > tdb['hz_limit'].data)
 
         # add shadow height to the viability criteria of the pointings to create the final 
         # subset that are candidates for observation
-        valid_idx = numpy.where(valid_mask & hz_ok)[0]
+        valid_idx = np.where(valid_mask & hz_ok)[0]
 
         # If there's nothing to observe, return -1
         if len(valid_idx) == 0:
@@ -242,12 +242,12 @@ class Scheduler(object):
         valid_priorities[valid_incomplete] = self.maxpriority + 1
 
         # Loops starting with targets with the highest priority (lowest numerical value).
-        for priority in numpy.flip(numpy.unique(valid_priorities), axis=0):
+        for priority in np.flip(np.unique(valid_priorities), axis=0):
 
             # Gets the indices that correspond to this priority (note that
             # these indices correspond to positions in valid_idx, not in the
             # master list).
-            valid_priority_idx = numpy.where(valid_priorities == priority)[0]
+            valid_priority_idx = np.where(valid_priorities == priority)[0]
 
             # If there's nothing to do at the current priority, try the next lower
             if len(valid_priority_idx) == 0:
@@ -258,8 +258,8 @@ class Scheduler(object):
             valid_alt_tile_priority = valid_tile_priorities[valid_priority_idx]
 
             # Find the tiles with the highest tile priority
-            max_tile_priority = numpy.max(valid_alt_tile_priority)
-            high_priority_tiles = numpy.where(valid_alt_tile_priority == max_tile_priority)[0]
+            max_tile_priority = np.max(valid_alt_tile_priority)
+            high_priority_tiles = np.where(valid_alt_tile_priority == max_tile_priority)[0]
 
             # Gets the pointing with the highest altitude * shadow height
             obs_alt_idx = (valid_alt_target_priority[high_priority_tiles]).argmax()
@@ -286,7 +286,7 @@ class Atomic(object):
         survey_start = 2459458
         survey_end = 2460856
 
-        self.observing_plan = ObservingPlan(2459458, 2460856, observatory='LCO')
+        self.observing_plan = ObservingPlan(survey_start, survey_end, observatory='LCO')
         self._tiledb = None
         self._scheduler = None
         self._observed = None
@@ -306,7 +306,7 @@ class Atomic(object):
     @property
     def observed(self):
         if self._observed is None:
-            self._observed = numpy.zeros(len(self.tiledb), dtype=numpy.float64)
+            self._observed = np.zeros(len(self.tiledb), dtype=np.float64)
         return self._observed
 
     def prepare_for_night(self, jd):
@@ -324,3 +324,46 @@ class Atomic(object):
         self.observed[idx] += exptime
 
         return tileid
+
+
+class Cals(object):
+    """
+    A convenience class to choose skies and standards
+    """
+
+    def __init__(self, tile_id):
+        ra, dec = OpsDB.retrieve_tile_ra_dec(tile_id)
+        self.ra = ra
+        self.dec = dec
+        self._skies = None
+        self._standards = None
+
+    @property
+    def skies(self):
+        if self._skies is None:
+            self._skies = OpsDB.load_sky(ra=self.ra, dec=self.dec)
+        return self._skies
+
+    @property
+    def standards(self):
+        if self._standards is None:
+            self._standards = OpsDB.load_standard(ra=self.ra, dec=self.dec)
+        return self._standards
+
+    def center_distance(self, ra, dec):
+        assert len(ra) == len(dec), "ra and dec must be same length"
+        dist = lvmsurveysim.utils.spherical.great_circle_distance(
+                  self.ra, self.dec, ra, dec)
+        return dist
+
+    def choose_skies(self, N=10):
+        dist = self.center_distance(self.skies["ra"].data,
+                                    self.skies["dec"].data)
+        first_N = np.argsort(dist)[:N]
+        return self.skies["pk"][first_N]
+
+    def choose_standards(self, N=10):
+        dist = self.center_distance(self.standards["ra"].data,
+                                    self.standards["dec"].data)
+        first_N = np.argsort(dist)[:N]
+        return self.standards["pk"][first_N]
