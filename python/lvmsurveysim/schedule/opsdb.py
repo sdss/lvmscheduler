@@ -87,30 +87,34 @@ class OpsDB(object):
         return Table.from_pandas(dataframe)
 
     @classmethod
-    def load_sky(cls, ra=None, dec=None, version=None):
+    def load_sky(cls, ra=None, dec=None, radius=10, version=None):
         """
         Load tile table, save version for later.
 
         TODO: connect to other tables to get completion, etc?
         """
 
-        allRows = Sky.select().dicts()
+        allRows = Sky.select()
+        if ra and dec:
+            allRows = allRows.where(Sky.cone_search(ra, dec, radius))
 
-        dataframe = pd.DataFrame(allRows)
+        dataframe = pd.DataFrame(allRows.dicts())
 
         return Table.from_pandas(dataframe)
 
     @classmethod
-    def load_standard(cls, ra=None, dec=None, version=None):
+    def load_standard(cls, ra=None, dec=None, radius=10, version=None):
         """
         Load tile table, save version for later.
 
         TODO: connect to other tables to get completion, etc?
         """
 
-        allRows = Standard.select().dicts()
+        allRows = Standard.select()
+        if ra and dec:
+            allRows = allRows.where(Standard.cone_search(ra, dec, radius))
 
-        dataframe = pd.DataFrame(allRows)
+        dataframe = pd.DataFrame(allRows.dicts())
 
         return Table.from_pandas(dataframe)
 

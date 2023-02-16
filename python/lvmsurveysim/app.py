@@ -35,9 +35,16 @@ async def cals():
     """
     return the next tile
     """
-    tile_id = int(request.args["tile_id"])
+    tile_id = None
+    ra = None
+    dec = None
+    if "tile_id" in args:
+        tile_id = int(request.args["tile_id"])
+    if "ra" in args and "dec" in args:
+        ra = float(request.args["ra"])
+        dec = float(request.args["dec"])
 
-    cals = await wrapBlocking(Cals, tile_id)
+    cals = await wrapBlocking(Cals, tile_id=tile_id, ra=ra, dec=dec)
     skies = await wrapBlocking(cals.choose_skies)
     standards = await wrapBlocking(cals.choose_standards)
 
