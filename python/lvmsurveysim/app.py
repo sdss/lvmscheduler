@@ -1,31 +1,40 @@
 #!/usr/bin/env/python
 from quart import Quart, jsonify, request
 import numpy as np
+from astropy.time import Time
 
 from lvmsurveysim.utils import wrapBlocking
 from lvmsurveysim.schedule.scheduler import Atomic, Cals
+from lvmsurveysim.exceptions import LVMSurveyOpsError
 
 app = Quart(__name__)
 
-
-# ######
-# TO DO: this is all blocking, oops
-# ######
 
 @app.route("/next_tile", methods=["GET"])
 async def next_tile():
     """
     return the next tile
     """
-    jd = float(request.args["jd"])
+    if "jd" in request.args:
+        jd = float(request.args["jd"])
+    else:
+        now = Time.now()
+        now.format = "jd"
+        jd = now.value
 
     sched = await wrapBlocking(Atomic)
 
     await wrapBlocking(sched.prepare_for_night, np.floor(jd))
 
-    tile_id = await wrapBlocking(sched.next_tile, jd)
-
-    next_tile = {"tile_id": int(tile_id)}
+    try:
+        tile_id = await wrapBlocking(sched.next_tile, jd)
+        next_tile = {"tile_id": int(tile_id),
+                     "jd": jd,
+                     "errors": ""}
+    except LVMSurveyOpsError:
+        next_tile = {"tile_id": np.nan,
+                     "jd": jd,
+                     "errors": "jd missing or invalid"}
 
     return jsonify(next_tile)
 
@@ -38,13 +47,20 @@ async def cals():
     tile_id = None
     ra = None
     dec = None
-    if "tile_id" in args:
+    if "tile_id" in request.args:
         tile_id = int(request.args["tile_id"])
-    if "ra" in args and "dec" in args:
+    if "ra" in request.args and "dec" in request.args:
         ra = float(request.args["ra"])
         dec = float(request.args["dec"])
 
-    cals = await wrapBlocking(Cals, tile_id=tile_id, ra=ra, dec=dec)
+    if "jd" in request.args:
+        jd = float(request.args["jd"])
+    else:
+        now = Time.now()
+        now.format = "jd"
+        jd = now.value
+
+    cals = await wrapBlocking(Cals, tile_id=tile_id, ra=ra, dec=dec, jd=jd)
     skies = await wrapBlocking(cals.choose_skies)
     standards = await wrapBlocking(cals.choose_standards)
 

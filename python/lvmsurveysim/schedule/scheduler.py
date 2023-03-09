@@ -7,10 +7,11 @@
 
 import numpy as np
 from astropy.time import Time
+from astropy.coordinates import EarthLocation
 
 import lvmsurveysim.target
 from lvmsurveysim.schedule.opsdb import OpsDB
-from lvmsurveysim.schedule.plan import ObservingPlan
+from lvmsurveysim.schedule.plan import ObservingPlan, get_sun_moon_data
 from lvmsurveysim import config
 from lvmsurveysim.exceptions import LVMSurveyOpsError
 from lvmsurveysim.schedule.altitude_calc import AltitudeCalculator
@@ -332,22 +333,27 @@ class Cals(object):
     A convenience class to choose skies and standards
     """
 
-    def __init__(self, tile_id=None, ra=None, dec=None):
+    def __init__(self, tile_id=None, ra=None, dec=None, jd=None):
         if tile_id:
             self.ra, self.dec = OpsDB.retrieve_tile_ra_dec(tile_id)
         else:
             self.ra = ra
             self.dec = dec
+        self.jd = jd
         self._skies = None
         self._standards = None
-        self.location = astropy.coordinates.EarthLocation.of_site(full_obs_name)
+        self.observatory = "LCO"
+        self.location = EarthLocation.of_site(self.observatory)
         self.lon = self.location.lon.deg
         self.lat = self.location.lat.deg
 
+        load = skyfield.api.Loader("/home/sdss5/config/skyfield-data")
+        eph = load('de421.bsp')
+
         self.shadow_calc = shadow_height_lib.shadow_calc(observatory_name=self.observatory,
-                                observatory_elevation=observing_plan.location.height,
-                                observatory_lat=self.lat, observatory_lon=self.lon,
-                                eph=eph, earth=eph['earth'], sun=eph['sun'])
+                              observatory_elevation=self.location.height,
+                              observatory_lat=self.lat, observatory_lon=self.lon,
+                              eph=eph, earth=eph['earth'], sun=eph['sun'])
 
     @property
     def skies(self):
@@ -364,26 +370,44 @@ class Cals(object):
         return self._standards
 
     def skyCostFunc(self):
-        now = Time.now()
-        now.format = "JD"
-        jd = now.value
-        lst = lvmsurveysim.utils.spherical.get_lst(jd, self.lon)
+        if self.jd is None:
+            now = Time.now()
+            now.format = "jd"
+            self.jd = now.value
+        lst = lvmsurveysim.utils.spherical.get_lst(self.jd, self.lon)
 
         targ_dist = self.center_distance(self.skies["ra"].data,
                                          self.skies["dec"].data)
         self.shadow_calc.set_coordinates(self.skies["ra"].data,
                                          self.skies["dec"].data)
-        hz = self.shadow_calc.get_heights(return_heights=True, jd=jd)
-        ac = AltitudeCalculator(ra, dec, self.lon, self.lat)
-        am = 1. / np.sin(np.pi / 180. * self.ac(lst=lst))
-        spos, mpos, k = get_sun_moon_data(jd, location=self.location)
+        hz = self.shadow_calc.get_heights(return_heights=True, jd=self.jd)
+        ac = AltitudeCalculator(self.skies["ra"].data,
+                                self.skies["dec"].data,
+                                self.lon, self.lat)
+        am = 1. / np.sin(np.pi / 180. * ac(lst=lst))
+        spos, mpos, k = get_sun_moon_data(self.jd, location=self.location)
         moon_sky_dist = lvmsurveysim.utils.spherical.great_circle_distance(
                            mpos.ra.deg, mpos.dec.deg,
                            self.skies["ra"].data, self.skies["dec"].data)
         moon_targ_dist = lvmsurveysim.utils.spherical.great_circle_distance(
                            mpos.ra.deg, mpos.dec.deg, self.ra, self.dec)
 
-        return (5000/(500-hz)) + am*10 + (moon_sky_dist - moon_targ_dist) + targ_dist
+        # print("hz", len(hz), hz)
+        # print("am", len(am), am)
+        # print("moon_sky_dist", len(moon_sky_dist), moon_sky_dist)
+        # print("moon_targ_dist", len(moon_targ_dist), moon_targ_dist)
+        # print("targ_dist", len(targ_dist), targ_dist)
+
+        min_diff = np.min(np.abs(moon_sky_dist - moon_targ_dist))
+
+        # for z, a, ms, t in zip(hz, am, moon_sky_dist, targ_dist):
+        #     print(f"{z:.1f} {a:.2f} {ms:.1f} {t:.1f}")
+        #     print(f"{(5000/(500-z)):.1f} {a*10:.2f} {10*float(np.abs(ms - moon_targ_dist)/min_diff):.1f}")
+        #     print((5000/(500-z)) + a*10 + 10*np.abs(ms - moon_targ_dist)/min_diff + t)
+
+        return (5000/(500-hz)) + am*10 +\
+               2*(np.abs(moon_sky_dist - moon_targ_dist) - min_diff) +\
+               targ_dist
 
     def center_distance(self, ra, dec):
         assert len(ra) == len(dec), "ra and dec must be same length"
@@ -392,9 +416,12 @@ class Cals(object):
         return dist
 
     def choose_skies(self, N=2):
-        dist = self.center_distance(self.skies["ra"].data,
-                                    self.skies["dec"].data)
-        first_N = np.argsort(dist)[:N]
+        # dist = self.center_distance(self.skies["ra"].data,
+        #                             self.skies["dec"].data)
+        # first_N = np.argsort(dist)[:N]
+
+        cost = self.skyCostFunc()
+        first_N = np.argsort(cost)[:N]
         return self.skies["pk"][first_N]
 
     def choose_standards(self, N=10):
