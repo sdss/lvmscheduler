@@ -5,12 +5,13 @@
 # @Filename: tiledb.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+import os
+
 import numpy as np
 from astropy.time import Time
 from astropy.coordinates import EarthLocation
 
 import lvmsurveysim.target
-from lvmsurveysim.schedule.opsdb import OpsDB
 from lvmsurveysim.schedule.plan import ObservingPlan, get_sun_moon_data
 from lvmsurveysim import config
 from lvmsurveysim.exceptions import LVMSurveyOpsError
@@ -19,6 +20,9 @@ from lvmsurveysim.schedule.altitude_calc import AltitudeCalculator
 import skyfield.api
 from lvmsurveysim.utils import shadow_height_lib
 
+if os.getenv("OBSERVATORY") == "LCO":
+    # mostly helps for sims
+    from lvmsurveysim.schedule.opsdb import OpsDB
 
 np.seterr(invalid='raise')
 
@@ -72,7 +76,10 @@ class Scheduler(object):
 
         self.zenith_avoidance = config['scheduler']['zenith_avoidance']
 
-        load = skyfield.api.Loader("/home/sdss5/config/skyfield-data")
+        if os.getenv("OBSERVATORY") == "LCO":
+            load = skyfield.api.Loader("/home/sdss5/config/skyfield-data")
+        else:
+            load = skyfield.api.Loader(os.path.expanduser("~/.config"))
         eph = load('de421.bsp')
         self.shadow_calc = shadow_height_lib.shadow_calc(observatory_name=self.observatory,
                                 observatory_elevation=observing_plan.location.height,

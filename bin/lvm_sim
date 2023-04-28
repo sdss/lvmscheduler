@@ -1,0 +1,90 @@
+#! /usr/bin/env python
+
+import os
+import argparse
+
+from astropy.table import Table
+
+from lvmsurveysim.schedule import ObservingPlan, Simulator, TileDB
+from lvmsurveysim.target import TargetList
+import matplotlib.pyplot as plt
+
+
+def runSim(target_file, readFits=None, writeFits=None, outdir=None):
+    # Creates a list of targets/
+    targets = TargetList(target_file=target_file)
+
+    if readFits:
+        tile_table = Table.read(readFits+'.fits')
+        tiledb = TileDB(targets, tile_tab=tile_table)
+    else:
+        # Alternatively, tile the survey
+        print('Tiling Survey ...')
+        tiledb = TileDB(targets)
+        tiledb.tile_targets()
+        if writeFits:
+            tiledb.tile_table.write(writeFits+'.fits', 
+                                    format='fits',
+                                    overwrite=True)
+    
+    # Creates observing plans for LCO for the range sep 2021 - jun 2025.
+    lco_plan = ObservingPlan(2459458, 2460856, observatory='LCO') # baseline
+
+    # Creates an Simulator instance and runs the simulation
+    sim = Simulator(tiledb, observing_plan=lco_plan)
+
+    # Run the simulation
+    sim.run(progress_bar=True)
+
+    # evaluate the results:
+    sim.print_statistics()
+
+    if not outdir:
+        outdir = ""
+    fig = sim.plot_survey('LCO', use_groups=True)
+    fig.savefig(os.path.join(outdir, "figure1.pdf"))
+    fig = sim.plot_survey('LCO', use_groups=True, cumulative=True)
+    fig.savefig(os.path.join(outdir, "figure2.pdf"))
+    fig = sim.plot_survey('LCO', lst=True, use_groups=True)
+    fig.savefig(os.path.join(outdir, "figure3.pdf"))
+    fig = sim.plot(fast=True) # footprint
+    fig.savefig(os.path.join(outdir, "figure4.pdf"))
+    fig = sim.plot_airmass(tname='ALL', group=True, norm=True)
+    fig.savefig(os.path.join(outdir, "figure5.pdf"))
+    fig = sim.plot_shadow_height(tname='ALL', group=True, norm=True, cumulative=True, linear_log=True)
+    fig.savefig(os.path.join(outdir, "figure6.pdf"))
+
+
+if __name__ == "__main__":
+    usage = "lvm_sim"
+    description = "tile LVM from yaml or astropy table"
+    parser = argparse.ArgumentParser(description=description, usage=usage)
+    parser.add_argument("-t", "--target", dest="target", type=str,
+                        required=False, help="path to target yaml")
+    parser.add_argument("-r", "--read", dest="readFits", type=str,
+                        required=False, help="path for input tiledb fits",
+                        default=None)
+    parser.add_argument("-w", "--write", dest="writeFits", type=str,
+                        required=False, help="path for output tiledb fits",
+                        default=None)
+    parser.add_argument("-o", "--out", dest="out", type=str,
+                        required=False, help="output dir for figs",
+                        default=None)    
+
+    args = parser.parse_args()
+    target = args.target
+    readFits = args.readFits
+    writeFits = args.writeFits
+    outdir = args.out
+
+    if not target:
+        prod_dir = os.path.abspath(__file__).split("/bin/lvm_sim")[0]
+        target_file = os.path.join(prod_dir, 'python/lvmsurveysim/etc/target_test.yaml')
+    else:
+        target_file = target
+
+    if outdir:
+        if not os.path.isdir(outdir):
+            os.mkdir(outdir)
+
+    runSim(target_file, readFits=readFits, writeFits=writeFits, outdir=outdir)

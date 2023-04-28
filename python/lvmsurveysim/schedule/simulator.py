@@ -62,7 +62,7 @@ class Simulator(object):
 
         # get rid of the special tiles, we do not need them for the simulator
         tdb = tiledb.tile_table
-        tiledb.tile_table = tdb[numpy.where(tdb['TileID'] >= tiledb.tileid_start)[0]]
+        tiledb.tile_table = tdb[numpy.where(tdb['tile_id'] >= tiledb.tileid_start)[0]]
 
         if observing_plan is None:
             observing_plan = self._create_observing_plan()
@@ -148,7 +148,7 @@ class Simulator(object):
         scheduler = Scheduler(plan)
 
         # observed exposure time for each pointing
-        observed = numpy.zeros(len(self.tiledb.tile_table), dtype=numpy.float)
+        observed = numpy.zeros(len(self.tiledb.tile_table), dtype=float)
 
         # range of dates for the survey
         min_date = numpy.min(plan['JD'])
@@ -199,11 +199,11 @@ class Simulator(object):
 
         """
 
-        # initialize the scheduler for the night
-        scheduler.prepare_for_night(jd, self.observing_plan, self.tiledb)
-
         # shortcut
         tdb = self.tiledb.tile_table
+
+        # initialize the scheduler for the night
+        scheduler.prepare_for_night(jd, self.observing_plan, tdb)
 
         # begin at twilight
         current_jd = scheduler.evening_twi
@@ -223,12 +223,12 @@ class Simulator(object):
                 continue
 
             # observe it, give it one quantum of exposure
-            exptime = tdb['VisitExptime'].data[observed_idx]
+            exptime = tdb['visit_exptime'].data[observed_idx]
             observed[observed_idx] += exptime
 
             # collect observation data to put in table
-            tileid_observed = tdb['TileID'].data[observed_idx]
-            target_index = tdb['TargetIndex'].data[observed_idx]
+            tileid_observed = tdb['tile_id'].data[observed_idx]
+            target_index = tdb['target_index'].data[observed_idx]
             target_name = self.targets[target_index].name
             groups = self.targets[target_index].groups
             target_group = groups[0] if groups else 'None'
@@ -236,7 +236,7 @@ class Simulator(object):
 
             # Get the index of the first value in index_to_target that matches
             # the index of the target.
-            target_index_first = numpy.nonzero(tdb['TargetIndex'].data == target_index)[0][0]
+            target_index_first = numpy.nonzero(tdb['target_index'].data == target_index)[0][0]
             # Get the index of the pointing within its target.
             pointing_index = observed_idx - target_index_first
             
@@ -250,9 +250,9 @@ class Simulator(object):
                                         target_group=target_group,
                                         tileid = tileid_observed,
                                         pointing_index=pointing_index,
-                                        ra=tdb['RA'].data[observed_idx], 
-                                        dec=tdb['DEC'].data[observed_idx],
-                                        pa=tdb['PA'].data[observed_idx],
+                                        ra=tdb['ra'].data[observed_idx], 
+                                        dec=tdb['dec'].data[observed_idx],
+                                        pa=tdb['pa'].data[observed_idx],
                                         airmass=airmass,
                                         lunation=lunation,
                                         shadow_height= hz, #hz[valid_priority_idx[obs_tile_idx]],
@@ -498,7 +498,7 @@ class Simulator(object):
             if (tname != '-'):
                 target = self.targets[i]
                 tile_area[tname] = target.get_pixarea(ifu=self.ifu)
-                target_ntiles[tname] = len(numpy.where(self.tiledb.tile_table['TargetIndex'] == i)[0])
+                target_ntiles[tname] = len(numpy.where(self.tiledb.tile_table['target_index'] == i)[0])
                 target_nvisits[tname] = float(target.n_exposures / target.min_exposures)
             else:
                 tile_area[tname] = -999
@@ -523,7 +523,7 @@ class Simulator(object):
 
         rows = [
             (t if t != '-' else 'unused',
-             numpy.float(target_ntiles[t]),
+             float(target_ntiles[t]),
              numpy.around(target_ntiles_observed[t], decimals=2),
              numpy.around(time_on_target[t] / 3600.0, decimals=2),
              numpy.around(exptime_on_target[t] / 3600.0, decimals=2),
@@ -601,7 +601,7 @@ class Simulator(object):
             The Matplotlib figure of the plot.
         """
 
-        assert self.schedule != None, 'you still have not run a simulation.'
+        assert self.schedule is not None, 'you still have not run a simulation.'
 
         if not targets:
             targets = [target.name for target in self.targets]
@@ -644,7 +644,7 @@ class Simulator(object):
         for group in groups:
 
             # Cumulated group heights
-            group_heights = numpy.zeros(len(b) - 1, dtype=numpy.float)
+            group_heights = numpy.zeros(len(b) - 1, dtype=float)
             group_target_tot_time = 0.0
 
             # If we are not using groups or the "group"
@@ -671,7 +671,7 @@ class Simulator(object):
                 heights, bins = numpy.histogram(tt, bins=b)
                 heights = numpy.array(heights, dtype=float)
                 heights *= t.exptime * t.min_exposures / 3600.0
-                ntiles = len(numpy.where(self.tiledb.tile_table['TargetIndex'].data == tindex)[0])
+                ntiles = len(numpy.where(self.tiledb.tile_table['target_index'].data == tindex)[0])
                 target_tot_time = ntiles * t.exptime * t.n_exposures / 3600.
 
                 if skip_fast:

@@ -25,7 +25,7 @@ from lvmsurveysim import IFU, config
 from lvmsurveysim.target import Target
 from lvmsurveysim.exceptions import LVMSurveyOpsError, LVMSurveyOpsWarning
 import lvmsurveysim.utils.spherical
-import lvmsurveysim.schedule.opsdb as opsdb
+# import lvmsurveysim.schedule.opsdb as opsdb
 from lvmsurveysim.utils.plot import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
 from lvmsurveysim.target.skyregion import SkyRegion
 
@@ -162,26 +162,26 @@ class TileDB(object):
         # create the tile table and calculate/record all the necessary data
         self._create_tile_table()
 
-    def update_status(self, tileid, status):
-        """
-        Update the status field of a tile.
+    # def update_status(self, tileid, status):
+    #     """
+    #     Update the status field of a tile.
 
-        Parameters
-        ----------
-        tileid : Integer
-            the tile id of the tile to update.
-        status : Integer
-            the new status word.
+    #     Parameters
+    #     ----------
+    #     tileid : Integer
+    #         the tile id of the tile to update.
+    #     status : Integer
+    #         the new status word.
 
-        """
-        idx = numpy.where(self.tile_table['TileID'] == tileid)[0]
-        if len(idx) != 1:
-            raise LVMSurveyOpsError(f'tileid {tileid} not found')
+    #     """
+    #     idx = numpy.where(self.tile_table['TileID'] == tileid)[0]
+    #     if len(idx) != 1:
+    #         raise LVMSurveyOpsError(f'tileid {tileid} not found')
 
-        # Update record in database first, then update the cached table
-        s = opsdb.OpsDB.update_tile_status(tileid, status)
-        assert s==1, 'Database error, more than one tileid updated.'
-        self.tile_table['Status'][idx] = status
+    #     # Update record in database first, then update the cached table
+    #     s = opsdb.OpsDB.update_tile_status(tileid, status)
+    #     assert s==1, 'Database error, more than one tileid updated.'
+    #     self.tile_table['Status'][idx] = status
 
     def plot(self, target=None, projection='mollweide', fast=False, annotate=False, alpha=0.75):
         """Plots the tiled survey pointings.
