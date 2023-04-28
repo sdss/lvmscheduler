@@ -17,3 +17,20 @@ Survey tiling, operations, and simulations for LVM.
 
 .. |coveralls| image:: https://coveralls.io/repos/github/sdss/lvmsurveysim/badge.svg?service=github
     :target: https://coveralls.io/github/sdss/lvmsurveysim
+
+Now ready for simulations (again)
+---------------------------------
+
+``$ git clone https://github.com/sdss/lvmscheduler.git``
+
+``$ cd lvmscheduler``
+    
+``$ pip install -e .``
+    
+``$ lvm_sim -w tiledb -o figsDir``
+
+``-w`` for "write" a tiledb so you don't have to tile every time
+
+``-r`` to "read" a written tiledb
+
+``-o`` for "out"; a directory to save the output figures
