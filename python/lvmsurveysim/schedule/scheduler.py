@@ -346,7 +346,6 @@ class Atomic(object):
 
         tileid = self.tiledb['tile_id'].data[idx]
         exptime = self.tiledb['visit_exptime'].data[idx]
-        self.observed[idx] += exptime
 
         return tileid
 
