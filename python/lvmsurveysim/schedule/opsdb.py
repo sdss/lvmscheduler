@@ -89,9 +89,7 @@ class OpsDB(object):
     @classmethod
     def load_sky(cls, ra=None, dec=None, radius=10, version=None):
         """
-        Load tile table, save version for later.
-
-        TODO: connect to other tables to get completion, etc?
+        Grab skies, optionally in a radius
         """
 
         allRows = Sky.select()
@@ -105,9 +103,7 @@ class OpsDB(object):
     @classmethod
     def load_standard(cls, ra=None, dec=None, radius=10, version=None):
         """
-        Load tile table, save version for later.
-
-        TODO: connect to other tables to get completion, etc?
+        Grab standards, optionally in a radius
         """
 
         allRows = Standard.select()
@@ -123,3 +119,21 @@ class OpsDB(object):
         tile = Tile.get(tile_id)
 
         return tile.ra, tile.dec
+
+    @classmethod
+    def load_history(cls, version=None):
+        """
+        Grab history
+        """
+
+        # table not implemented yet
+        return None
+
+    @classmethod
+    def load_completion_status(cls, version=None):
+        """
+        Grab tile completion status
+        """
+
+        # table not implemented yet
+        return None

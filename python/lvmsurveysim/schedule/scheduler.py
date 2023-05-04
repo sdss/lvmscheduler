@@ -145,7 +145,7 @@ class Scheduler(object):
         self.moon_ok = (self.moon_to_pointings > self.tiledb['moon_distance_limit'].data)\
                      & (self.lunation <= self.tiledb['lunation_limit'].data)
 
-    def get_optimal_tile(self, jd, observed):
+    def get_optimal_tile(self, jd, observed, done=None):
         """Returns the next tile to observe at a given (float) jd.
 
         jd must be between the times of evening and morning twilight on the id
@@ -174,6 +174,10 @@ class Scheduler(object):
             This record is kept by the caller and passed in, since an observation might fail 
             in real life. So accounting of actual observing time spent on target must be the
             responsibility of the caller.
+
+        done : np.array
+            Same length as len(tiledb).
+            Array containing boolean done or not per tile
 
         Returns
         -------
@@ -214,11 +218,12 @@ class Scheduler(object):
         airmass_ok = ((alt_start > self.min_alt_for_target) & (alt_end > self.min_alt_for_target))
 
         # Gets pointings that haven't been completely observed
-        exptime_ok = observed < tdb['total_exptime'].data
+        if done is None:
+            done = observed >= tdb['total_exptime'].data
 
         # Creates a mask of viable pointings with correct Moon avoidance,
         # airmass, zenith avoidance and that have not been completed.
-        valid_mask = alt_ok & self.moon_ok & airmass_ok & exptime_ok
+        valid_mask = alt_ok & self.moon_ok & airmass_ok & ~done
 
         # calculate shadow heights, but only for the viable pointings since it is a costly computation
         hz = np.full(len(alt_ok), 0.0)
@@ -235,7 +240,7 @@ class Scheduler(object):
             return -1, lst, 0, 0, self.lunation
 
         # Find observations that have nonzero exposure but are incomplete
-        incomplete = (observed > 0) & (observed < tdb['total_exptime'].data)
+        incomplete = (observed > 0) & (~done)
 
         target_priorities = tdb['target_priority'].data
         tile_priorities = tdb['tile_priority'].data
@@ -298,7 +303,8 @@ class Atomic(object):
         self.observing_plan = ObservingPlan(survey_start, survey_end, observatory='LCO')
         self._tiledb = None
         self._scheduler = None
-        self._observed = None
+        self._history = None
+        self._done = None
 
     @property
     def tiledb(self):
@@ -313,20 +319,30 @@ class Atomic(object):
         return self._scheduler
 
     @property
-    def observed(self):
-        if self._observed is None:
-            self._observed = np.zeros(len(self.tiledb), dtype=np.float64)
-        return self._observed
+    def history(self):
+        if self._history is None:
+            # full_hist = OpsDB.load_history()
+            # hist_in_order = [full_hist[tile_id] for tile_id in self.tiledb["tile_id"]]
+            self._history = np.zeros(len(self.tiledb), dtype=np.float64)
+        return self._history
+
+    @property
+    def done(self):
+        if self._done is None:
+            # full_done = OpsDB.load_history()
+            # done_in_order = [full_done[tile_id] for tile_id in self.tiledb["tile_id"]]
+            self._done = np.zeros(len(self.tiledb), dtype=bool)
+        return self._done
 
     def prepare_for_night(self, jd):
         self._tiledb = None
-        self._observed = None
+        self._history = None
 
         self.scheduler.prepare_for_night(jd, self.observing_plan, self.tiledb)
 
     def next_tile(self, jd):
         idx, current_lst, hz, alt, lunation = \
-            self.scheduler.get_optimal_tile(jd, self.observed)
+            self.scheduler.get_optimal_tile(jd, self.history, self.done)
 
         tileid = self.tiledb['tile_id'].data[idx]
         exptime = self.tiledb['visit_exptime'].data[idx]
@@ -431,7 +447,7 @@ class Cals(object):
         first_N = np.argsort(cost)[:N]
         return self.skies["pk"][first_N]
 
-    def choose_standards(self, N=10):
+    def choose_standards(self, N=12):
         dist = self.center_distance(self.standards["ra"].data,
                                     self.standards["dec"].data)
         first_N = np.argsort(dist)[:N]
