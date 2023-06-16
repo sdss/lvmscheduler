@@ -35,24 +35,6 @@ class OpsDB(object):
         pass
 
     @classmethod
-    def update_tile_status(cls, tileid, status):
-        '''
-        Update the tile Status column in the tile database.
-        '''
-        s = Tile.update({Tile.Status: status}).where(Tile.TileID == tileid).execute()
-        if s == 0:
-            raise LVMSurveyOpsError('Attempt to set status on unknown TildID '+str(tileid))
-        return s
-
-    @classmethod
-    def record_observation(cls, TileID, obstype, jd, lst, hz, obs_alt, lunation):
-        '''
-        Record an LVM Observation in the database.
-        '''
-        return Observation.insert(TileID=TileID, JD=jd, LST=lst, Hz=hz,
-                                  Alt=obs_alt, Lunation=lunation).execute()
-
-    @classmethod
     def upload_tiledb(cls, tiledb=None, tile_table=None):
         """
         Saves a tile table to the operations database, optionally into a FITS table.
