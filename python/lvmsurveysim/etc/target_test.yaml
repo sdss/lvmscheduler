@@ -9,7 +9,7 @@ LMC:
     telescope: LVM-160
     max_airmass: 2.00
     min_shadowheight: 1.0
-    exptime: 1200
+    exptime: 900
     n_exposures: 9
     min_exposures: 3
     min_moon_dist: 45
@@ -32,7 +32,7 @@ SMC:
     telescope: LVM-160
     max_airmass: 1.75
     min_shadowheight: 1.0
-    exptime: 1200
+    exptime: 900
     n_exposures: 9
     min_exposures: 3
     min_moon_dist: 45
