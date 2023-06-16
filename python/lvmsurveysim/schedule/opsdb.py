@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# @Author: Niv Drory (drory@astro.as.utexas.edu)
+# @Author: John Donor (j.donor@tcu.edu)
 # @Filename: tiledb.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
@@ -10,6 +10,7 @@
 # operations database and data classes for a survey tile and a survey observation
 import pandas as pd
 from astropy.table import Table
+from peewee import fn
 
 from lvmsurveysim.exceptions import LVMSurveyOpsError
 import lvmsurveysim.utils.sqlite2astropy as s2a
@@ -18,7 +19,8 @@ from sdssdb.peewee.lvmdb import database
 
 database.become_admin()
 
-from sdssdb.peewee.lvmdb.lvmopsdb import Tile, Sky, Standard, Observation
+from sdssdb.peewee.lvmdb.lvmopsdb import (Tile, Sky, Standard, Observation,
+                                          CompletionStatus)
 
 # ########
 # TODO: both of these methods will be using additional new tables
@@ -62,7 +64,7 @@ class OpsDB(object):
         TODO: connect to other tables to get completion, etc?
         """
 
-        allRows = Tile.select().dicts()
+        allRows = Tile.select().order_by(Tile.tile_id.asc()).dicts()
 
         dataframe = pd.DataFrame(allRows)
 
@@ -103,17 +105,47 @@ class OpsDB(object):
         return tile.ra, tile.dec
 
     @classmethod
-    def load_history(cls, version=None):
+    def retrieve_tile_dithers(cls, tile_id):
+        pos = Tile.select(Observation.dither_pos)\
+                  .join(Observation)\
+                  .join(CompletionStatus)\
+                  .where(CompletionStatus.done,
+                         Tile.tile_id == tile_id)
+
+        return [p.dither_pos for p in pos]
+
+    @classmethod
+    def load_history(cls, version=None, tile_ids=None):
         """
         Grab history
+
+        version : TBD, if needed
+
+        tile_ids: iterable of ints, hist will be returned in this order
         """
 
-        # table not implemented yet
-        return None
+        if tile_ids is None:
+            tq = Tile.select(Tile.tile_id).order_by(Tile.tile_id.asc())
+            tile_ids = [t.tile_id for t in tq]
+
+        hist = Tile.select(Tile.tile_id,
+                                fn.Count(Observation.obs_id).alias("count"))\
+                   .join(Observation)\
+                   .join(CompletionStatus)\
+                   .where(CompletionStatus.done)\
+                   .group_by(Tile.tile_id).dicts()
+
+        hist = {h["tile_id"]: h["count"] * 900 for h in hist}
+
+        total_time = [hist.get(t, 0) for t in tile_ids]
+        return total_time
 
     @classmethod
     def load_completion_status(cls, version=None):
         """
+        Possibly unreasonable if we're doing completion
+        based on dithers, calculate elsewhere?
+
         Grab tile completion status
         """
 

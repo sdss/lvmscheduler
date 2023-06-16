@@ -27,13 +27,15 @@ async def next_tile():
     await wrapBlocking(sched.prepare_for_night, np.floor(jd))
 
     try:
-        tile_id = await wrapBlocking(sched.next_tile, jd)
+        tile_id, dither_pos = await wrapBlocking(sched.next_tile, jd)
         next_tile = {"tile_id": int(tile_id),
                      "jd": jd,
+                     "dither_pos": dither_pos,
                      "errors": ""}
     except LVMSurveyOpsError:
         next_tile = {"tile_id": np.nan,
                      "jd": jd,
+                     "dither_pos": 0,
                      "errors": "jd missing or invalid"}
 
     return jsonify(next_tile)

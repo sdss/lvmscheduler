@@ -321,18 +321,16 @@ class Atomic(object):
     @property
     def history(self):
         if self._history is None:
-            # full_hist = OpsDB.load_history()
-            # hist_in_order = [full_hist[tile_id] for tile_id in self.tiledb["tile_id"]]
-            self._history = np.zeros(len(self.tiledb), dtype=np.float64)
+            self._history = np.array(OpsDB.load_history(tile_ids=self.tiledb["tile_id"]))
         return self._history
 
-    @property
-    def done(self):
-        if self._done is None:
-            # full_done = OpsDB.load_history()
-            # done_in_order = [full_done[tile_id] for tile_id in self.tiledb["tile_id"]]
-            self._done = np.zeros(len(self.tiledb), dtype=bool)
-        return self._done
+    # @property
+    # def done(self):
+    #     if self._done is None:
+    #         # full_done = OpsDB.load_history()
+    #         # done_in_order = [full_done[tile_id] for tile_id in self.tiledb["tile_id"]]
+    #         self._done = np.zeros(len(self.tiledb), dtype=bool)
+    #     return self._done
 
     def prepare_for_night(self, jd):
         self._tiledb = None
@@ -342,12 +340,19 @@ class Atomic(object):
 
     def next_tile(self, jd):
         idx, current_lst, hz, alt, lunation = \
-            self.scheduler.get_optimal_tile(jd, self.history, self.done)
+            self.scheduler.get_optimal_tile(jd, self.history)
 
-        tileid = self.tiledb['tile_id'].data[idx]
-        exptime = self.tiledb['visit_exptime'].data[idx]
+        tile_id = self.tiledb['tile_id'].data[idx]
+        exptime = self.tiledb['total_exptime'].data[idx]
+        if exptime == 900:
+            return tile_id, 0
+        done_pos = OpsDB.retrieve_tile_dithers(tile_id)
 
-        return tileid
+        all_dithers = set([1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+        next_dither = min(all_dithers.difference(done_pos))
+
+        return tile_id, next_dither
 
 
 class Cals(object):
