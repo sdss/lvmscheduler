@@ -1,7 +1,7 @@
 #!/usr/bin/env/python
-import json
 
-from quart import Quart, jsonify, request
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import numpy as np
 from astropy.time import Time
 
@@ -10,16 +10,30 @@ from lvmsurveysim.schedule.scheduler import Atomic, Cals
 from lvmsurveysim.exceptions import LVMSurveyOpsError
 from lvmsurveysim.schedule.opsdb import OpsDB
 
-app = Quart(__name__)
+
+class Observation(BaseModel):
+    dither: int
+    tile_id: int
+    jd: float
+    seeing: float
+    standards: list
+    skies: list
+    exposure_no: int
 
 
-@app.route("/next_tile", methods=["GET"])
-async def next_tile():
+app = FastAPI()
+
+@app.get("/")
+async def root():
+    return {"message": "[Obi Wan]: This is not the page you're looking for"}
+
+@app.get("/next_tile")
+async def next_tile(jd: float | None = None):
     """
     return the next tile
     """
-    if "jd" in request.args:
-        jd = float(request.args["jd"])
+    if jd:
+        jd = jd
     else:
         now = Time.now()
         now.format = "jd"
@@ -41,26 +55,24 @@ async def next_tile():
                      "dither_pos": 0,
                      "errors": "jd missing or invalid"}
 
-    return jsonify(next_tile)
+    return next_tile
 
 
-@app.route("/cals", methods=["GET"])
-async def cals():
+@app.get("/cals")
+async def cals(
+    tile_id: int | None = None,
+    ra: float | None = None,
+    dec: float | None = None,
+    jd: float | None = None
+):
     """
-    return the next tile
+    return cals for tile or location
     """
-    tile_id = None
-    ra = None
-    dec = None
-    if "tile_id" in request.args:
-        tile_id = int(request.args["tile_id"])
-    if "ra" in request.args and "dec" in request.args:
-        ra = float(request.args["ra"])
-        dec = float(request.args["dec"])
 
-    if "jd" in request.args:
-        jd = float(request.args["jd"])
-    else:
+    if tile_id is None and (ra is None or dec is None):
+        raise HTTPException(status_code=418, detail="Must specify tile or RA/Dec")
+
+    if not jd:
         now = Time.now()
         now.format = "jd"
         jd = now.value
@@ -73,17 +85,16 @@ async def cals():
                 "sky_pks": [int(s) for s in skies],
                 "standard_pks": [int(s) for s in standards]}
 
-    return jsonify(cal_dict)
+    return cal_dict
 
 
-@app.route("/register_observation", methods=["POST"])
-async def register_observation():
+@app.put("/register_observation/")
+async def register_observation(observation: Observation):
     """
     register a new observation
     """
 
-    dat = await request.get_data()
-    params = json.loads(dat)
+    params = observation.dict()
 
     jd = params.get("jd")
     tile_id = params.get("tile_id")
@@ -95,4 +106,4 @@ async def register_observation():
 
     success = await wrapBlocking(OpsDB.add_observation, **params, **obs_params)
 
-    return jsonify(success)
+    return {"success": success}

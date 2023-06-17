@@ -202,3 +202,5 @@ class OpsDB(object):
                               "obs_id": obs.obs_id})
         
         res = ObservationToSky.insert_many(sky_dicts).execute()
+
+        return True
