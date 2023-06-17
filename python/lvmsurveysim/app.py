@@ -1,4 +1,6 @@
 #!/usr/bin/env/python
+import json
+
 from quart import Quart, jsonify, request
 import numpy as np
 from astropy.time import Time
@@ -6,6 +8,7 @@ from astropy.time import Time
 from lvmsurveysim.utils import wrapBlocking
 from lvmsurveysim.schedule.scheduler import Atomic, Cals
 from lvmsurveysim.exceptions import LVMSurveyOpsError
+from lvmsurveysim.schedule.opsdb import OpsDB
 
 app = Quart(__name__)
 
@@ -71,3 +74,25 @@ async def cals():
                 "standard_pks": [int(s) for s in standards]}
 
     return jsonify(cal_dict)
+
+
+@app.route("/register_observation", methods=["POST"])
+async def register_observation():
+    """
+    register a new observation
+    """
+
+    dat = await request.get_data()
+    params = json.loads(dat)
+
+    jd = params.get("jd")
+    tile_id = params.get("tile_id")
+
+    sched = await wrapBlocking(Atomic)
+    await wrapBlocking(sched.prepare_for_night, np.floor(jd))
+
+    obs_params = sched.scheduler.obs_info_helper(tile_id, jd)
+
+    success = await wrapBlocking(OpsDB.add_observation, **params, **obs_params)
+
+    return jsonify(success)

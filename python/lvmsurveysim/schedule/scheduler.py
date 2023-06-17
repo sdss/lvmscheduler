@@ -290,6 +290,31 @@ class Scheduler(object):
         assert False, "Unreachable code!"
         return -1, 0   # should never be reached
 
+    def obs_info_helper(self, tile_id, jd):
+        """
+        return info to populate observation table for given jd
+        """
+
+        if jd >= self.morning_twi or jd < self.evening_twi:
+            raise LVMSurveyOpsError(f'the time {jd} is not between {self.evening_twi} and {self.morning_twi}.')
+
+        tdb = self.tiledb
+
+        tile_idx = np.where(tdb["tile_id"] == tile_id)
+
+        # Get current LST
+        lst = lvmsurveysim.utils.spherical.get_lst(jd, self.lon)
+
+        # advance shadow height calculator to current time
+        self.shadow_calc.update_time(jd=jd)
+        alt = self.ac(lst=lst)
+        hz = self.shadow_calc.get_heights(return_heights=True, unit="km")
+
+        return {"lst": float(lst),
+                "hz": float(hz[tile_idx]),
+                "alt": float(alt[tile_idx]),
+                "lunation": float(self.lunation)}
+
 
 class Atomic(object):
     """A basic, constrained wrapper around Scheduler to fill "live" or

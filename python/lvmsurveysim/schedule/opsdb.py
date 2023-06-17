@@ -10,6 +10,7 @@
 # operations database and data classes for a survey tile and a survey observation
 import pandas as pd
 from astropy.table import Table
+from astropy.time import Time 
 from peewee import fn
 
 from lvmsurveysim.exceptions import LVMSurveyOpsError
@@ -20,7 +21,9 @@ from sdssdb.peewee.lvmdb import database
 database.become_admin()
 
 from sdssdb.peewee.lvmdb.lvmopsdb import (Tile, Sky, Standard, Observation,
-                                          CompletionStatus)
+                                          CompletionStatus, Dither, Exposure,
+                                          ExposureFlavor, ObservationToStandard,
+                                          ObservationToSky, Weather)
 
 # ########
 # TODO: both of these methods will be using additional new tables
@@ -129,8 +132,8 @@ class OpsDB(object):
             tile_ids = [t.tile_id for t in tq]
 
         hist = Tile.select(Tile.tile_id,
-                                fn.Count(Observation.obs_id).alias("count"))\
-                   .join(Observation)\
+                                fn.Count(Dither.pk).alias("count"))\
+                   .join(Dither)\
                    .join(CompletionStatus)\
                    .where(CompletionStatus.done)\
                    .group_by(Tile.tile_id).dicts()
@@ -151,3 +154,51 @@ class OpsDB(object):
 
         # table not implemented yet
         return None
+
+    @classmethod
+    def add_observation(cls, tile_id=None, exposure_no=None, dither=0, jd=0.0,
+                        seeing=10.0, standards=[], skies=[],
+                        lst=None, hz=None, alt=None, lunation=None):
+        """
+        add a recent observation to the DB
+        """
+
+        if tile_id is None or exposure_no is None:
+            return False
+
+        dither_pos, created = Dither.get_or_create(tile_id=tile_id, position=dither)
+        dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
+        dither_stat.update(done=True, by_pipeline=False).execute()
+
+        obs = Observation.create(dither=dither_pos,
+                                 jd=jd,
+                                 lst=lst,
+                                 hz=hz,
+                                 alt=alt,
+                                 lunation=lunation)
+        
+        Weather.create(obs_id=obs.obs_id, seeing=seeing)
+
+        sciece_flavor = ExposureFlavor.get(label="Science")
+
+        start_time = Time(jd, format="jd").datetime
+
+        Exposure.create(observation=obs,
+                        exposure_no=exposure_no,
+                        exposure_flavor=sciece_flavor,
+                        start_time=start_time,
+                        exposure_time=900)
+
+        standard_dicts = list()
+        for s in standards:
+            standard_dicts.append({"standard_pk": s,
+                                   "obs_id": obs.obs_id})
+        
+        res = ObservationToStandard.insert_many(standard_dicts).execute()
+
+        sky_dicts = list()
+        for s in skies:
+            sky_dicts.append({"sky_pk": s,
+                              "obs_id": obs.obs_id})
+        
+        res = ObservationToSky.insert_many(sky_dicts).execute()
