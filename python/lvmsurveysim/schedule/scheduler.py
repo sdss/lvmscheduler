@@ -444,18 +444,7 @@ class Cals(object):
         moon_targ_dist = lvmsurveysim.utils.spherical.great_circle_distance(
                            mpos.ra.deg, mpos.dec.deg, self.ra, self.dec)
 
-        # print("hz", len(hz), hz)
-        # print("am", len(am), am)
-        # print("moon_sky_dist", len(moon_sky_dist), moon_sky_dist)
-        # print("moon_targ_dist", len(moon_targ_dist), moon_targ_dist)
-        # print("targ_dist", len(targ_dist), targ_dist)
-
         min_diff = np.min(np.abs(moon_sky_dist - moon_targ_dist))
-
-        # for z, a, ms, t in zip(hz, am, moon_sky_dist, targ_dist):
-        #     print(f"{z:.1f} {a:.2f} {ms:.1f} {t:.1f}")
-        #     print(f"{(5000/(500-z)):.1f} {a*10:.2f} {10*float(np.abs(ms - moon_targ_dist)/min_diff):.1f}")
-        #     print((5000/(500-z)) + a*10 + 10*np.abs(ms - moon_targ_dist)/min_diff + t)
 
         return (5000/(500-hz)) + am*10 +\
                2*(np.abs(moon_sky_dist - moon_targ_dist) - min_diff) +\
@@ -474,10 +463,16 @@ class Cals(object):
 
         cost = self.skyCostFunc()
         first_N = np.argsort(cost)[:N]
-        return self.skies["pk"][first_N]
+
+        pos = [[s["ra"], s["dec"]] for s in self.skies[first_N]]
+
+        return self.skies["pk"][first_N], pos
 
     def choose_standards(self, N=12):
         dist = self.center_distance(self.standards["ra"].data,
                                     self.standards["dec"].data)
         first_N = np.argsort(dist)[:N]
-        return self.standards["pk"][first_N]
+
+        pos = [[s["ra"], s["dec"]] for s in self.standards[first_N]]
+
+        return self.standards["pk"][first_N], pos
