@@ -27,6 +27,18 @@ app = FastAPI()
 async def root():
     return {"message": "[Obi Wan]: This is not the page you're looking for"}
 
+
+@app.get("/tile_info")
+async def tile_info(tile_id: int):
+    """
+    return the next tile
+    """
+
+    info = OpsDB.tile_info(tile_id)
+
+    return info
+
+
 @app.get("/next_tile")
 async def next_tile(jd: float | None = None):
     """
@@ -44,16 +56,20 @@ async def next_tile(jd: float | None = None):
     await wrapBlocking(sched.prepare_for_night, np.floor(jd))
 
     try:
-        tile_id, dither_pos = await wrapBlocking(sched.next_tile, jd)
+        tile_id, dither_pos, pos = await wrapBlocking(sched.next_tile, jd)
         next_tile = {"tile_id": int(tile_id),
                      "jd": jd,
                      "dither_pos": dither_pos,
-                     "errors": ""}
+                     "tile_pos": pos,
+                     "errors": "",
+                     "coord_order": ["ra", "dec", "pa"]}
     except LVMSurveyOpsError:
         next_tile = {"tile_id": np.nan,
                      "jd": jd,
                      "dither_pos": 0,
-                     "errors": "jd missing or invalid"}
+                     "tile_pos": [np.nan, np.nan],
+                     "errors": "jd missing or invalid",
+                     "coord_order": ["ra", "dec", "pa"]}
 
     return next_tile
 

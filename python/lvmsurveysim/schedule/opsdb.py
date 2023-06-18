@@ -25,10 +25,6 @@ from sdssdb.peewee.lvmdb.lvmopsdb import (Tile, Sky, Standard, Observation,
                                           ExposureFlavor, ObservationToStandard,
                                           ObservationToSky, Weather)
 
-# ########
-# TODO: both of these methods will be using additional new tables
-# ########
-
 
 class OpsDB(object):
     """
@@ -204,3 +200,13 @@ class OpsDB(object):
         res = ObservationToSky.insert_many(sky_dicts).execute()
 
         return True
+
+    @classmethod
+    def tile_info(cls, tile_id):
+        """
+        return info on a single tile_id
+        """
+
+        tile = Tile.get(tile_id=tile_id)
+
+        return tile.__data__

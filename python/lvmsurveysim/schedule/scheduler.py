@@ -367,17 +367,20 @@ class Atomic(object):
         idx, current_lst, hz, alt, lunation = \
             self.scheduler.get_optimal_tile(jd, self.history)
 
-        tile_id = self.tiledb['tile_id'].data[idx]
-        exptime = self.tiledb['total_exptime'].data[idx]
+        tdb = self.tiledb
+
+        tile_id = tdb['tile_id'].data[idx]
+        exptime = tdb['total_exptime'].data[idx]
+        pos = [tdb['ra'].data[idx], tdb['dec'].data[idx], tdb['pa'].data[idx]]
         if exptime == 900:
-            return tile_id, 0
+            return tile_id, 0, pos
         done_pos = OpsDB.retrieve_tile_dithers(tile_id)
 
         all_dithers = set([1, 2, 3, 4, 5, 6, 7, 8, 9])
 
         next_dither = min(all_dithers.difference(done_pos))
 
-        return tile_id, next_dither
+        return tile_id, next_dither, pos
 
 
 class Cals(object):
