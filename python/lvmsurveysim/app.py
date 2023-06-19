@@ -1,6 +1,7 @@
 #!/usr/bin/env/python
 
 import logging
+from logging.handlers import RotatingFileHandler
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -14,6 +15,11 @@ from lvmsurveysim.schedule.opsdb import OpsDB
 
 logging.config.fileConfig('etc/logging.conf', disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
+LOGFILE = "/data/logs/lvmscheduler/current.log"
+format = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+fh = RotatingFileHandler(LOGFILE, maxBytes=(1048576*5), backupCount=7)
+fh.setFormatter(format)
+logger.addHandler(fh)
 
 
 class Observation(BaseModel):
