@@ -1,5 +1,7 @@
 #!/usr/bin/env/python
 
+import logging
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np
@@ -9,6 +11,9 @@ from lvmsurveysim.utils import wrapBlocking
 from lvmsurveysim.schedule.scheduler import Atomic, Cals
 from lvmsurveysim.exceptions import LVMSurveyOpsError
 from lvmsurveysim.schedule.opsdb import OpsDB
+
+logging.config.fileConfig('etc/logging.conf', disable_existing_loggers=False)
+logger = logging.getLogger(__name__)
 
 
 class Observation(BaseModel):
@@ -34,6 +39,8 @@ async def tile_info(tile_id: int):
     return the next tile
     """
 
+    logger.info(f"info for tile_id {tile_id} requested")
+
     info = OpsDB.tile_info(tile_id)
 
     return info
@@ -44,6 +51,8 @@ async def next_tile(jd: float | None = None):
     """
     return the next tile
     """
+
+    logger.info(f"tile request for JD {jd}")
     if jd:
         jd = jd
     else:
@@ -55,6 +64,8 @@ async def next_tile(jd: float | None = None):
 
     await wrapBlocking(sched.prepare_for_night, np.floor(jd))
 
+    logger.info(f"pulling tile for JD {jd}")
+
     try:
         tile_id, dither_pos, pos = await wrapBlocking(sched.next_tile, jd)
         next_tile = {"tile_id": int(tile_id),
@@ -64,12 +75,15 @@ async def next_tile(jd: float | None = None):
                      "errors": "",
                      "coord_order": ["ra", "dec", "pa"]}
     except LVMSurveyOpsError:
+        tile_id = np.nan
         next_tile = {"tile_id": np.nan,
                      "jd": jd,
                      "dither_pos": 0,
                      "tile_pos": [np.nan, np.nan],
                      "errors": "jd missing or invalid",
                      "coord_order": ["ra", "dec", "pa"]}
+
+    logger.info(f"tile {tile_id} with dither {dither_pos} JD {jd}")
 
     return next_tile
 
@@ -85,6 +99,8 @@ async def cals(
     return cals for tile or location
     """
 
+    logger.info(f"cals requested for tile_id: {tile_id}, ra {ra}, dec {dec}, JD {jd}")
+
     if tile_id is None and (ra is None or dec is None):
         raise HTTPException(status_code=418, detail="Must specify tile or RA/Dec")
 
@@ -96,6 +112,9 @@ async def cals(
     cals = await wrapBlocking(Cals, tile_id=tile_id, ra=ra, dec=dec, jd=jd)
     skies, sky_pos = await wrapBlocking(cals.choose_skies)
     standards, stan_pos = await wrapBlocking(cals.choose_standards)
+
+    logger.info("standards: " + ",".join([str(s) for s in standards]))
+    logger.info("skies: " + ",".join([str(s) for s in skies]))
 
     cal_dict = {"tile_id": tile_id,
                 "sky_pks": [int(s) for s in skies],
@@ -115,6 +134,9 @@ async def register_observation(observation: Observation):
 
     params = observation.dict()
 
+    logger.info("attempting to register observation")
+    logger.info(params)
+
     jd = params.get("jd")
     tile_id = params.get("tile_id")
 
@@ -124,5 +146,7 @@ async def register_observation(observation: Observation):
     obs_params = sched.scheduler.obs_info_helper(tile_id, jd)
 
     success = await wrapBlocking(OpsDB.add_observation, **params, **obs_params)
+
+    logger.info(f"register observation reported {success}")
 
     return {"success": success}
