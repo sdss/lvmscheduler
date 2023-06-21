@@ -70,13 +70,13 @@ class OpsDB(object):
         return Table.from_pandas(dataframe)
 
     @classmethod
-    def load_sky(cls, ra=None, dec=None, radius=10, version=None):
+    def load_sky(cls, ra=None, dec=None, radius=None, version=None):
         """
         Grab skies, optionally in a radius
         """
 
         allRows = Sky.select()
-        if ra and dec:
+        if ra and dec and radius:
             allRows = allRows.where(Sky.cone_search(ra, dec, radius))
 
         dataframe = pd.DataFrame(allRows.dicts())

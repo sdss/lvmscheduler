@@ -413,8 +413,7 @@ class Cals(object):
     @property
     def skies(self):
         if self._skies is None:
-            self._skies = OpsDB.load_sky(ra=self.ra, dec=self.dec,
-                                         radius=10)
+            self._skies = OpsDB.load_sky()
         return self._skies
 
     @property
@@ -424,34 +423,35 @@ class Cals(object):
                                                   radius=10)
         return self._standards
 
-    def skyCostFunc(self):
+    def darkSky(self):
+        """
+        Return inded of the WHAM darkest field with lowest airmass
+        """
         if self.jd is None:
             now = Time.now()
             now.format = "jd"
             self.jd = now.value
         lst = lvmsurveysim.utils.spherical.get_lst(self.jd, self.lon)
 
-        targ_dist = self.center_distance(self.skies["ra"].data,
-                                         self.skies["dec"].data)
-        self.shadow_calc.set_coordinates(self.skies["ra"].data,
-                                         self.skies["dec"].data)
-        hz = self.shadow_calc.get_heights(return_heights=True, jd=self.jd)
-        ac = AltitudeCalculator(self.skies["ra"].data,
-                                self.skies["dec"].data,
+        darkest = self.skies[self.skies["darkest_wham_flag"]]
+
+        ac = AltitudeCalculator(darkest["ra"].data,
+                                darkest["dec"].data,
                                 self.lon, self.lat)
         am = 1. / np.sin(np.pi / 180. * ac(lst=lst))
-        spos, mpos, k = get_sun_moon_data(self.jd, location=self.location)
-        moon_sky_dist = lvmsurveysim.utils.spherical.great_circle_distance(
-                           mpos.ra.deg, mpos.dec.deg,
-                           self.skies["ra"].data, self.skies["dec"].data)
-        moon_targ_dist = lvmsurveysim.utils.spherical.great_circle_distance(
-                           mpos.ra.deg, mpos.dec.deg, self.ra, self.dec)
 
-        min_diff = np.min(np.abs(moon_sky_dist - moon_targ_dist))
+        pk = darkest[np.argmin(am)]["pk"]
 
-        return (5000/(500-hz)) + am*10 +\
-               2*(np.abs(moon_sky_dist - moon_targ_dist) - min_diff) +\
-               targ_dist
+        return np.where(self.skies["pk" == pk])
+
+    def closeSky(self):
+        other = self.skies[~self.skies["darkest_wham_flag"]]
+        targ_dist = self.center_distance(other["ra"].data,
+                                         other["dec"].data)
+        
+        pk = other[np.argmin(targ_dist)]["pk"]
+
+        return np.where(self.skies["pk" == pk])
 
     def center_distance(self, ra, dec):
         assert len(ra) == len(dec), "ra and dec must be same length"
@@ -459,17 +459,18 @@ class Cals(object):
                   self.ra, self.dec, ra, dec)
         return dist
 
-    def choose_skies(self, N=2):
-        # dist = self.center_distance(self.skies["ra"].data,
-        #                             self.skies["dec"].data)
-        # first_N = np.argsort(dist)[:N]
+    def choose_skies(self):
 
-        cost = self.skyCostFunc()
-        first_N = np.argsort(cost)[:N]
+        dark = self.skies[self.darkSky()]
+        close = self.skies[self.closeSky()]
 
-        pos = [[s["ra"], s["dec"]] for s in self.skies[first_N]]
+        # look at all that casting
+        # why astropy, why?
 
-        return self.skies["pk"][first_N], pos
+        pos = [[float(dark["ra"]), float(dark["dec"])], [float(close["ra"]), float(close["dec"])]]
+        pk = [int(dark["pk"]), int(close["pk"])]
+
+        return pk, pos
 
     def choose_standards(self, N=12):
         dist = self.center_distance(self.standards["ra"].data,
