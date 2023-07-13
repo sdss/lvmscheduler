@@ -401,6 +401,13 @@ class Cals(object):
         self.location = EarthLocation.of_site(self.observatory)
         self.lon = self.location.lon.deg
         self.lat = self.location.lat.deg
+        self.altitude_limit = 30
+        if self.jd is None:
+            now = Time.now()
+            now.format = "jd"
+            self.jd = now.value
+
+        self.lst = lvmsurveysim.utils.spherical.get_lst(self.jd, self.lon)
 
         load = skyfield.api.Loader("/home/sdss5/config/skyfield-data")
         eph = load('de421.bsp')
@@ -413,24 +420,29 @@ class Cals(object):
     @property
     def skies(self):
         if self._skies is None:
-            self._skies = OpsDB.load_sky()
+            all_skies = OpsDB.load_sky()
+            ac = AltitudeCalculator(all_skies["ra"].data,
+                                    all_skies["dec"].data,
+                                    self.lon, self.lat)
+            alt = ac(lst=self.lst)
+            self._skies = all_skies[alt > self.altitude_limit]
         return self._skies
 
     @property
     def standards(self):
         if self._standards is None:
-            self._standards = OpsDB.load_standard(ra=self.ra, dec=self.dec,
-                                                  radius=10)
+            all_standards = OpsDB.load_standard()
+            ac = AltitudeCalculator(all_standards["ra"].data,
+                                    all_standards["dec"].data,
+                                    self.lon, self.lat)
+            alt = ac(lst=self.lst)
+            self._standards = all_standards[alt > self.altitude_limit]
         return self._standards
 
     def darkSky(self):
         """
         Return inded of the WHAM darkest field with lowest airmass
         """
-        if self.jd is None:
-            now = Time.now()
-            now.format = "jd"
-            self.jd = now.value
         lst = lvmsurveysim.utils.spherical.get_lst(self.jd, self.lon)
 
         darkest = self.skies[self.skies["darkest_wham_flag"]]
@@ -442,7 +454,7 @@ class Cals(object):
 
         pk = darkest[np.argmin(am)]["pk"]
 
-        return np.where(self.skies["pk" == pk])
+        return np.where(self.skies["pk"] == pk)
 
     def closeSky(self):
         other = self.skies[~self.skies["darkest_wham_flag"]]
@@ -451,7 +463,7 @@ class Cals(object):
         
         pk = other[np.argmin(targ_dist)]["pk"]
 
-        return np.where(self.skies["pk" == pk])
+        return np.where(self.skies["pk"] == pk)
 
     def center_distance(self, ra, dec):
         assert len(ra) == len(dec), "ra and dec must be same length"
