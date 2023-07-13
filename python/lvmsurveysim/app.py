@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 format = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 LOGFILE = "/data/logs/lvmscheduler/current.log"
-fh = RotatingFileHandler(LOGFILE, maxBytes=(1048576*5), backupCount=7)
+fh = RotatingFileHandler(LOGFILE, maxBytes=(1048576 * 5), backupCount=7)
 fh.setFormatter(format)
 logger.addHandler(fh)
 
@@ -33,6 +33,7 @@ class Observation(BaseModel):
 
 
 app = FastAPI()
+
 
 @app.get("/")
 async def root():

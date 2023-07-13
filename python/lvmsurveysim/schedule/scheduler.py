@@ -470,6 +470,10 @@ class Cals(object):
         pos = [[float(dark["ra"]), float(dark["dec"])], [float(close["ra"]), float(close["dec"])]]
         pk = [int(dark["pk"]), int(close["pk"])]
 
+        if np.random.rand() < 0.5:
+            pos = [pos[1], pos[0]]
+            pk = [pk[1], pk[0]]
+
         return pk, pos
 
     def choose_standards(self, N=12):
