@@ -71,6 +71,19 @@ async def next_tile(jd: float | None = None):
 
     await wrapBlocking(sched.prepare_for_night, np.floor(jd))
 
+    errors = []
+
+    if jd < sched.scheduler.evening_twi:
+        new_jd = sched.scheduler.evening_twi
+        logger.info(f"jd {jd} < evening twilight, setting to {new_jd}")
+        errors.append("JD too early, using evening twilight")
+        jd = new_jd
+    elif jd > sched.scheduler.morning_twi:
+        new_jd = sched.scheduler.morning_twi - 1 / 24
+        logger.info(f"jd {jd} > morning twilight, setting to {new_jd}")
+        errors.append("JD too late, using morning twilight - 1 hr")
+        jd = new_jd
+
     logger.info(f"pulling tile for JD {jd}")
 
     try:
@@ -79,16 +92,12 @@ async def next_tile(jd: float | None = None):
                      "jd": jd,
                      "dither_pos": dither_pos,
                      "tile_pos": pos,
-                     "errors": "",
+                     "errors": errors,
                      "coord_order": ["ra", "dec", "pa"]}
-    except LVMSurveyOpsError:
-        tile_id = np.nan
-        next_tile = {"tile_id": np.nan,
-                     "jd": jd,
-                     "dither_pos": 0,
-                     "tile_pos": [np.nan, np.nan],
-                     "errors": "jd missing or invalid",
-                     "coord_order": ["ra", "dec", "pa"]}
+    except LVMSurveyOpsError as E:
+        logger.warning(f"caught exception {E}")
+
+        raise HTTPException(status_code=418, detail="There is a problem with the JD")
 
     logger.info(f"tile {tile_id} with dither {dither_pos} JD {jd}")
 
