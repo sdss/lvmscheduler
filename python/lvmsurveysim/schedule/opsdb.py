@@ -105,13 +105,15 @@ class OpsDB(object):
 
     @classmethod
     def retrieve_tile_dithers(cls, tile_id):
-        pos = Tile.select(Observation.dither_pos)\
+        pos = Tile.select(Dither.position)\
+                  .join(Dither)\
                   .join(Observation)\
+                  .switch(Dither)\
                   .join(CompletionStatus)\
                   .where(CompletionStatus.done,
                          Tile.tile_id == tile_id)
 
-        return [p.dither_pos for p in pos]
+        return [p.position for p in pos]
 
     @classmethod
     def load_history(cls, version=None, tile_ids=None):
