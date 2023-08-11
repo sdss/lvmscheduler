@@ -23,12 +23,12 @@ logger.addHandler(fh)
 
 
 class Observation(BaseModel):
-    dither: int
-    tile_id: int
+    dither: int | None
+    tile_id: int | None
     jd: float
-    seeing: float
-    standards: list
-    skies: list
+    seeing: float | None
+    standards: list | None
+    skies: list | None
     exposure_no: int
 
 
@@ -159,7 +159,10 @@ async def register_observation(observation: Observation):
     sched = await wrapBlocking(Atomic)
     await wrapBlocking(sched.prepare_for_night, np.floor(jd))
 
-    obs_params = sched.scheduler.obs_info_helper(tile_id, jd)
+    if tile_id:
+        obs_params = sched.scheduler.obs_info_helper(tile_id, jd)
+    else:
+        obs_params = {}
 
     success = await wrapBlocking(OpsDB.add_observation, **params, **obs_params)
 

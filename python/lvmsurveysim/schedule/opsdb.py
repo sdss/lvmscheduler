@@ -130,7 +130,7 @@ class OpsDB(object):
             tile_ids = [t.tile_id for t in tq]
 
         hist = Tile.select(Tile.tile_id,
-                                fn.Count(Dither.pk).alias("count"))\
+                           fn.Count(Dither.pk).alias("count"))\
                    .join(Dither)\
                    .join(CompletionStatus)\
                    .where(CompletionStatus.done)\
@@ -161,21 +161,24 @@ class OpsDB(object):
         add a recent observation to the DB
         """
 
-        if tile_id is None or exposure_no is None:
+        if exposure_no is None:
             return False
 
-        dither_pos, created = Dither.get_or_create(tile_id=tile_id, position=dither)
-        dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
-        dither_stat.update(done=True, by_pipeline=False).execute()
+        if tile_id is None:
+            obs = None
+        else:
+            dither_pos, created = Dither.get_or_create(tile_id=tile_id, position=dither)
+            dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
+            dither_stat.update(done=True, by_pipeline=False).execute()
 
-        obs = Observation.create(dither=dither_pos,
-                                 jd=jd,
-                                 lst=lst,
-                                 hz=hz,
-                                 alt=alt,
-                                 lunation=lunation)
-        
-        Weather.create(obs_id=obs.obs_id, seeing=seeing)
+            obs = Observation.create(dither=dither_pos,
+                                     jd=jd,
+                                     lst=lst,
+                                     hz=hz,
+                                     alt=alt,
+                                     lunation=lunation)
+            
+            Weather.create(obs_id=obs.obs_id, seeing=seeing)
 
         sciece_flavor = ExposureFlavor.get(label="Science")
 
@@ -186,6 +189,9 @@ class OpsDB(object):
                         exposure_flavor=sciece_flavor,
                         start_time=start_time,
                         exposure_time=900)
+
+        if obs is None:
+            return True
 
         standard_dicts = list()
         for s in standards:
