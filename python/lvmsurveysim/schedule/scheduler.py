@@ -494,5 +494,7 @@ class Cals(object):
         first_N = np.argsort(dist)[:N]
 
         pos = [[s["ra"], s["dec"]] for s in self.standards[first_N]]
+        source_id = self.standards["source_id"][first_N]
+        pk = self.standards["pk"][first_N]
 
-        return self.standards["pk"][first_N], pos
+        return pk, pos, source_id
