@@ -126,7 +126,7 @@ async def cals(
         jd = now.value
 
     cals = await wrapBlocking(Cals, tile_id=tile_id, ra=ra, dec=dec, jd=jd)
-    skies, sky_pos = await wrapBlocking(cals.choose_skies)
+    skies, sky_pos, sky_names = await wrapBlocking(cals.choose_skies)
     standards, stan_pos, stan_ids = await wrapBlocking(cals.choose_standards)
 
     logger.info("standards: " + ",".join([str(s) for s in standards]))
@@ -138,6 +138,7 @@ async def cals(
                 "sky_pos": sky_pos,
                 "standard_pos": stan_pos,
                 "standard_ids": [int(s) for s in stan_ids],
+                "sky_names": sky_names,
                 "coord_order": ["ra", "dec"]}
 
     return cal_dict

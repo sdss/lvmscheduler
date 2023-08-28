@@ -481,12 +481,14 @@ class Cals(object):
 
         pos = [[float(dark["ra"]), float(dark["dec"])], [float(close["ra"]), float(close["dec"])]]
         pk = [int(dark["pk"]), int(close["pk"])]
+        names = [str(dark["name"].value[0]).strip(),
+                 str(close["name"].value[0]).strip()]
 
         if np.random.rand() < 0.5:
             pos = [pos[1], pos[0]]
             pk = [pk[1], pk[0]]
 
-        return pk, pos
+        return pk, pos, names
 
     def choose_standards(self, N=12):
         dist = self.center_distance(self.standards["ra"].data,
