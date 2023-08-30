@@ -56,8 +56,8 @@ class OpsDB(object):
         if not tile_table:
             tile_table = tiledb.tile_table
 
-        dbVer = Version.get_or_create(label=version,
-                                      sched_tag=schedVer)
+        dbVer, new = Version.get_or_create(label=version,
+                                           sched_tag=schedVer)
         
         tile_table["version_pk"] = [int(dbVer.pk) for t in tile_table["tile_id"]]
 

@@ -43,7 +43,7 @@ if __name__ == "__main__":
                         required=False, help="path for output fits, no output if unspecified",
                         default=None)
     parser.add_argument("-v", "--version", dest="version", type=str,
-                        required=False, default="forgot"
+                        required=False, default="forgot",
                         help="named version for tiling version",)
 
     args = parser.parse_args()
