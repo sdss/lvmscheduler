@@ -48,7 +48,7 @@ def peewee2astropy(model):
     return table
 
 
-def astropy2peewee(table, model, replace=False):
+def astropy2peewee(table, model):
     '''
     Save an `astropy.table.Table` into a pewwee SQL database using a
     given model. The model's attributes MUST match the table's column by name and type.
@@ -62,9 +62,6 @@ def astropy2peewee(table, model, replace=False):
 
     model : ~peewee.Model
         The peewee model of the database table to store into
-
-    replace : Boolean
-        Replace rather than insert into the SQL table. Defaults to False.
     '''
     cols = model._meta.columns
     dbc = [c for c in cols]

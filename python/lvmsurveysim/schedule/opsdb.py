@@ -8,12 +8,13 @@
 
 
 # operations database and data classes for a survey tile and a survey observation
+import os
 import pandas as pd
 from astropy.table import Table
 from astropy.time import Time 
 from peewee import fn
 
-from lvmsurveysim.exceptions import LVMSurveyOpsError
+from lvmsurveysim import __version__ as schedVer
 import lvmsurveysim.utils.sqlite2astropy as s2a
 
 from sdssdb.peewee.lvmdb import database
@@ -23,7 +24,8 @@ database.become_admin()
 from sdssdb.peewee.lvmdb.lvmopsdb import (Tile, Sky, Standard, Observation,
                                           CompletionStatus, Dither, Exposure,
                                           ExposureFlavor, ObservationToStandard,
-                                          ObservationToSky, Weather)
+                                          ObservationToSky, Weather,
+                                          Version)
 
 
 class OpsDB(object):
@@ -36,7 +38,8 @@ class OpsDB(object):
         pass
 
     @classmethod
-    def upload_tiledb(cls, tiledb=None, tile_table=None):
+    def upload_tiledb(cls, tiledb=None, tile_table=None,
+                      version="forgot"):
         """
         Saves a tile table to the operations database, optionally into a FITS table.
         The default is to update the tile database in SQL. No parameters are needed in 
@@ -52,7 +55,13 @@ class OpsDB(object):
 
         if not tile_table:
             tile_table = tiledb.tile_table
-        s = s2a.astropy2peewee(tile_table, Tile, replace=True)
+
+        dbVer = Version.get_or_create(label=version,
+                                      sched_tag=schedVer)
+        
+        tile_table["version_pk"] = [int(dbVer.pk) for t in tile_table["tile_id"]]
+
+        s = s2a.astropy2peewee(tile_table, Tile)
         return s
 
     @classmethod
@@ -60,12 +69,22 @@ class OpsDB(object):
         """
         Load tile table, save version for later.
 
-        TODO: connect to other tables to get completion, etc?
+        version : int or str
+            pk or label for tiling version
         """
 
-        allRows = Tile.select().order_by(Tile.tile_id.asc()).dicts()
+        if type(version) == int:
+            ver = Version.get(pk=version)
+        elif type(version) == str:
+            ver = Version.get(label=version)
+        else:
+            ver = Version.get(label=os.getenv("TILE_VER"))
 
-        dataframe = pd.DataFrame(allRows)
+        allRows = Tile.select()\
+                      .where(Tile.version_pk == ver.pk)\
+                      .order_by(Tile.tile_id.asc())
+
+        dataframe = pd.DataFrame(allRows.dicts())
 
         return Table.from_pandas(dataframe)
 

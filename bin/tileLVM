@@ -20,14 +20,14 @@ def tile(target_file):
     return tiledb
 
 
-def write(table=None, path=None, target_file=None):
+def write(table=None, path=None, target_file=None, version="forgot"):
     assert table or target_file, "must pass astropy table or path to target yaml"
     if not table:
         tiledb = tile(target_file)
         table = tiledb.tile_table
         if path:
             tiledb.tile_table.write(path+'.fits', format='fits', overwrite=True)
-    OpsDB.upload_tiledb(tile_table=table)
+    OpsDB.upload_tiledb(tile_table=table, version=version)
 
 
 if __name__ == "__main__":
@@ -42,11 +42,15 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--path", dest="path", type=str,
                         required=False, help="path for output fits, no output if unspecified",
                         default=None)
+    parser.add_argument("-v", "--version", dest="version", type=str,
+                        required=False, default="forgot"
+                        help="named version for tiling version",)
 
     args = parser.parse_args()
     fits = args.fits
     target = args.target
     path = args.path
+    version = args.version
 
     table = None
 
@@ -60,4 +64,5 @@ if __name__ == "__main__":
         table = Table.read(fits)
         target_file = None
 
-    write(table=table, path=path, target_file=target_file)
+    write(table=table, path=path, target_file=target_file,
+          version=version)
