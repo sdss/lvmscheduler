@@ -30,6 +30,7 @@ class Observation(BaseModel):
     standards: list | None
     skies: list | None
     exposure_no: int
+    exposure_time: int | None
 
 
 app = FastAPI()

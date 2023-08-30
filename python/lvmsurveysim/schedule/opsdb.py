@@ -173,7 +173,8 @@ class OpsDB(object):
         return None
 
     @classmethod
-    def add_observation(cls, tile_id=None, exposure_no=None, dither=0, jd=0.0,
+    def add_observation(cls, tile_id=None, exposure_no=None, 
+                        dither=0, jd=0.0, exposure_time=900,
                         seeing=10.0, standards=[], skies=[],
                         lst=None, hz=None, alt=None, lunation=None):
         """
@@ -207,7 +208,7 @@ class OpsDB(object):
                         exposure_no=exposure_no,
                         exposure_flavor=sciece_flavor,
                         start_time=start_time,
-                        exposure_time=900)
+                        exposure_time=exposure_time)
 
         if obs is None:
             return True
