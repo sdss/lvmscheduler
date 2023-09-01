@@ -213,12 +213,18 @@ class OpsDB(object):
         if obs is None:
             return True
 
+        if standards is None:
+            standards = list()
+
         standard_dicts = list()
         for s in standards:
             standard_dicts.append({"standard_pk": s,
                                    "obs_id": obs.obs_id})
         
         res = ObservationToStandard.insert_many(standard_dicts).execute()
+
+        if skies is None:
+            skies = list()
 
         sky_dicts = list()
         for s in skies:

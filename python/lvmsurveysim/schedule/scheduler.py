@@ -295,8 +295,8 @@ class Scheduler(object):
         return info to populate observation table for given jd
         """
 
-        if jd >= self.morning_twi or jd < self.evening_twi:
-            raise LVMSurveyOpsError(f'the time {jd} is not between {self.evening_twi} and {self.morning_twi}.')
+        # if jd >= self.morning_twi or jd < self.evening_twi:
+        #     raise LVMSurveyOpsError(f'the time {jd} is not between {self.evening_twi} and {self.morning_twi}.')
 
         tdb = self.tiledb
 
