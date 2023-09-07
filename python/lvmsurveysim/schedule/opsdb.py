@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # @Author: John Donor (j.donor@tcu.edu)
-# @Filename: tiledb.py
+# @Filename: opsdb.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 

@@ -7,7 +7,10 @@ from astropy.table import Table
 
 from lvmsurveysim.schedule import TileDB
 from lvmsurveysim.target import TargetList
-from lvmsurveysim.schedule import OpsDB
+
+if os.getenv("OBSERVATORY") == "LCO":
+    # mostly helps for sims
+    from lvmsurveysim.schedule.opsdb import OpsDB
 
 
 def tile(target_file):
@@ -27,7 +30,10 @@ def write(table=None, path=None, target_file=None, version="forgot"):
         table = tiledb.tile_table
         if path:
             tiledb.tile_table.write(path+'.fits', format='fits', overwrite=True)
-    OpsDB.upload_tiledb(tile_table=table, version=version)
+    if os.getenv("OBSERVATORY") == "LCO":
+        OpsDB.upload_tiledb(tile_table=table, version=version)
+    else:
+        print("WARN: not running at LCO, DB not uploaded")
 
 
 if __name__ == "__main__":
