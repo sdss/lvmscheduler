@@ -214,6 +214,9 @@ class Scheduler(object):
         # avoid the zenith!
         alt_ok = (alt_start < (90 - self.zenith_avoidance)) & (alt_end < (90 - self.zenith_avoidance))
 
+        # avoid south pole for now
+        dec_ok = tdb['dec'] > -85.0
+
         # Gets valid airmasses (but we're working in altitude space)
         airmass_ok = ((alt_start > self.min_alt_for_target) & (alt_end > self.min_alt_for_target))
 
@@ -223,7 +226,7 @@ class Scheduler(object):
 
         # Creates a mask of viable pointings with correct Moon avoidance,
         # airmass, zenith avoidance and that have not been completed.
-        valid_mask = alt_ok & self.moon_ok & airmass_ok & ~done
+        valid_mask = alt_ok & self.moon_ok & airmass_ok & ~done & dec_ok
 
         # calculate shadow heights, but only for the viable pointings since it is a costly computation
         hz = np.full(len(alt_ok), 0.0)
@@ -366,6 +369,9 @@ class Atomic(object):
     def next_tile(self, jd):
         idx, current_lst, hz, alt, lunation = \
             self.scheduler.get_optimal_tile(jd, self.history)
+
+        if idx == -1:
+            return -999, -1, [-999, -999, -999]
 
         tdb = self.tiledb
 
