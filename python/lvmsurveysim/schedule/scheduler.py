@@ -379,12 +379,14 @@ class Atomic(object):
         exptime = tdb['total_exptime'].data[idx]
         pos = [tdb['ra'].data[idx], tdb['dec'].data[idx], tdb['pa'].data[idx]]
         if exptime == 900:
-            return tile_id, 0, pos
+            return tile_id, [0], pos
         done_pos = OpsDB.retrieve_tile_dithers(tile_id)
 
-        all_dithers = set([1, 2, 3, 4, 5, 6, 7, 8, 9])
+        all_dithers = set([0, 1, 2, 3, 4, 5, 6, 7, 8])
 
-        next_dither = min(all_dithers.difference(done_pos))
+        remain_dither = sorted(all_dithers.difference(done_pos))
+
+        next_dither = remain_dither[:3]
 
         return tile_id, next_dither, pos
 
