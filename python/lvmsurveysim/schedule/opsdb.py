@@ -124,9 +124,8 @@ class OpsDB(object):
 
     @classmethod
     def retrieve_tile_dithers(cls, tile_id):
-        pos = Tile.select(Dither.position)\
-                  .join(Dither)\
-                  .join(Observation)\
+        pos = Dither.select(Dither.position)\
+                  .join(Tile)\
                   .switch(Dither)\
                   .join(CompletionStatus)\
                   .where(CompletionStatus.done,
