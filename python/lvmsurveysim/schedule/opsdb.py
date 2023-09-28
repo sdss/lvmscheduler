@@ -94,7 +94,7 @@ class OpsDB(object):
         Grab skies, optionally in a radius
         """
 
-        allRows = Sky.select()
+        allRows = Sky.select().where(Sky.valid)
         if ra and dec and radius:
             allRows = allRows.where(Sky.cone_search(ra, dec, radius))
 
