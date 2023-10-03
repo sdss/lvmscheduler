@@ -81,7 +81,8 @@ class OpsDB(object):
             ver = Version.get(label=os.getenv("TILE_VER"))
 
         allRows = Tile.select()\
-                      .where(Tile.version_pk == ver.pk)\
+                      .where(Tile.version_pk == ver.pk,
+                             Tile.tile_priority > 0)\
                       .order_by(Tile.tile_id.asc())
 
         dataframe = pd.DataFrame(allRows.dicts())
