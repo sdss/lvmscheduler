@@ -109,7 +109,7 @@ class OpsDB(object):
         Grab standards, optionally in a radius
         """
 
-        allRows = Standard.select()
+        allRows = Standard.select().where(Standard.valid)
         if ra and dec:
             allRows = allRows.where(Standard.cone_search(ra, dec, radius))
 
