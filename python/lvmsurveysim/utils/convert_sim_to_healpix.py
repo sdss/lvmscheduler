@@ -175,7 +175,8 @@ def healpix_shader(data,
     projview(normalized_I_masked, projection_type='mollweide', 
              nest=nest, cbar=show_colorbar, cmap=cmap, rot=(0,0,0),
              min=0, max=norm*len(masks), xsize=4000, title=title,
-             graticule=graticule, graticule_labels=graticule)
+             longitude_grid_spacing=30, latitude_grid_spacing=30,
+             graticule=graticule, graticule_labels=graticule, xlabel='lon [deg]', ylabel='lat [deg]')
     if save == True:
         plt.savefig(outfile)
     if gui==True:
@@ -218,7 +219,8 @@ def run(params):
     log_I_max = 2.0
     log_I_min = -1.0
 
-    healpix_shader(log_I, masks, cmaps=colors, scale=scale, title=r"MW H$\alpha$", nest=True, vmin=log_I_min, vmax=log_I_max, outfile="%s_shaded_MW.png"%(params['file'].replace(".fits","")), gui=True)
+    healpix_shader(log_I, masks, cmaps=colors, scale=scale, title=None, nest=True, show_colorbar=False,
+                   vmin=log_I_min, vmax=log_I_max, outfile="%s_shaded_MW.png"%(params['file'].replace(".fits","")), gui=True)
 
 # convert_sim_to_healpix file:LCO_2023_5.fits target_file:targets.yaml nside:1024
 if __name__ == "__main__":
