@@ -2,15 +2,13 @@
 import astropy.io.fits as fits
 from astropy_healpix import HEALPix
 import healpy
-import os.path
+from healpy.newvisufunc import projview
 import numpy as np
 import sys
 import astropy
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz, get_sun, get_moon
+from astropy.coordinates import SkyCoord
 from astropy.coordinates import Galactic
-from astropy.time import Time
 import astropy.table
-import yaml
 import astropy.units as u
 from lvmsurveysim.target import TargetList
 import time
@@ -21,13 +19,10 @@ def convert(coversion_params):
         print(coversion_params_key,":", coversion_params[coversion_params_key])
 
     image_hdu_list = fits.open("Halpha_fwhm06_1024.fits")
-    image_nside = image_hdu_list[0].header['NSIDE']
     image_order = image_hdu_list[0].header['ORDERING']
-    image_data = np.array(image_hdu_list[1].data.tolist())[:,0]
     hp = HEALPix(nside=coversion_params['nside'], order=image_order, frame=Galactic())
 
     schedule = astropy.table.Table.read(coversion_params["file"])
-    target_names = np.unique(schedule['target'])
 
     print(coversion_params["target_file"])
     targets = TargetList(target_file=coversion_params["target_file"])
@@ -160,19 +155,15 @@ def healpix_shader(data,
     # Rescale all data from 0+pad to (normalization-pad)
     I = (I - vmin) * ( (norm - pad) - pad) / (vmax - vmin) + pad
 
-    normalized_I = np.full(len(I), -1.6375e+30)
-
+    normalized_I = I #np.full(len(I), -1.6375e+30) # start with MW Halpha background
 
     # add the offset to the data to push it into to each color range
     if scale is not False:
         for i in range(len(masks)):
             normalized_I[masks[i]] = I[masks[i]].copy()*scale[i] + min(i, len(cmaps)-1) * norm
-
     else:
         for i in range(len(masks)):
             normalized_I[masks[i]] = I[masks[i]].copy() + min(i, len(cmaps)-1) * norm
-
-    # I could add all the masks here and plot the un-masked values in grey scale.
 
     # If there is a healpix mask apply it.
     normalized_I_masked = healpy.ma(normalized_I)
@@ -180,10 +171,11 @@ def healpix_shader(data,
     if healpixMask != False:
         normalized_I_masked.mask = np.logical_not(healpixMask)
 
-    healpy.mollview(normalized_I_masked, nest=nest, cbar=show_colorbar, cmap=cmap, rot=(0,0,0), min=0, max=norm*len(masks), xsize=4000, title=title)
-
-    if graticule == True:
-        healpy.graticule()
+    #healpy.mollview(normalized_I_masked, nest=nest, cbar=show_colorbar, cmap=cmap, rot=(0,0,0), min=0, max=norm*len(masks), xsize=4000, title=title)
+    projview(normalized_I_masked, projection_type='mollweide', 
+             nest=nest, cbar=show_colorbar, cmap=cmap, rot=(0,0,0),
+             min=0, max=norm*len(masks), xsize=4000, title=title,
+             graticule=graticule, graticule_labels=graticule)
     if save == True:
         plt.savefig(outfile)
     if gui==True:
