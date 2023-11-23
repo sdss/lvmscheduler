@@ -1,13 +1,78 @@
-#! /usr/bin/env python
+#!/usr/bin/env/python
+
+import os
+import argparse
+
+import numpy as np
+from astropy.time import Time
 
 from lvmsurveysim.schedule.scheduler import Atomic
+from lvmsurveysim.exceptions import LVMSurveyOpsError
 
-sched = Atomic()
 
-sched.prepare_for_night(2459460)
+def next_tile(jd: float | None = None):
+    """
+    return the next tile
+    """
 
-current_jd = sched.scheduler.evening_twi
+    if jd:
+        jd = jd
+    else:
+        now = Time.now()
+        now.format = "jd"
+        jd = now.value
 
-print(current_jd)
+    sched = Atomic()
 
-print(sched.next_tile(current_jd))
+    sched.prepare_for_night(np.floor(jd))
+
+    errors = []
+
+    if jd < sched.scheduler.evening_twi:
+        new_jd = sched.scheduler.evening_twi
+        errors.append("JD too early, using evening twilight")
+        jd = new_jd
+    elif jd > sched.scheduler.morning_twi:
+        new_jd = sched.scheduler.morning_twi - 1 / 24
+        errors.append("JD too late, using morning twilight - 1 hr")
+        jd = new_jd
+
+
+    try:
+        tile_id, dither_pos, pos = sched.next_tile(jd)
+        next_tile = {"tile_id": int(tile_id),
+                     "jd": jd,
+                     "dither_pos": dither_pos,
+                     "tile_pos": pos,
+                     "errors": errors,
+                     "coord_order": ["ra", "dec", "pa"]}
+    except LVMSurveyOpsError as E:
+        logger.warning(f"caught exception {E}")
+
+        raise HTTPException(status_code=418, detail="There is a problem with the JD")
+
+    print(next_tile)
+
+
+if __name__ == "__main__":
+    usage = "tileLVM"
+    description = "tile LVM from yaml or astropy table"
+    parser = argparse.ArgumentParser(description=description, usage=usage)
+    parser.add_argument("-j", "--jd", dest="jd", type=float,
+                        required=False, help="jd",
+                        default=None)
+    parser.add_argument("-t", "--time", dest="time", type=str,
+                        required=False, help="time",
+                        default=None)
+
+    args = parser.parse_args()
+    jd = args.jd
+    time = args.time
+
+    if time:
+        at = Time(time)
+        if jd:
+            print("WARN: jd and time passed, preferring time")
+        jd = at.jd
+
+    next_tile(jd)
