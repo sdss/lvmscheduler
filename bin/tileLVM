@@ -7,6 +7,7 @@ from astropy.table import Table
 
 from lvmsurveysim.schedule import TileDB
 from lvmsurveysim.target import TargetList
+from lvmsurveysim.exceptions import LVMSurveyOpsError
 
 if os.getenv("OBSERVATORY") == "LCO":
     # mostly helps for sims
@@ -61,8 +62,10 @@ if __name__ == "__main__":
     table = None
 
     if not target:
-        prod_dir = os.path.abspath(__file__).split("/bin/tileLVM")[0]
-        target_file = os.path.join(prod_dir, 'python/lvmsurveysim/etc/target_test.yaml')
+        lvmcore_dir = os.environ.get("LVMCORE_DIR")
+        if lvmcore_dir is None:
+            raise LVMSurveyOpsError("\nlvmcore not found, try defining $LVMCORE_DIR")
+        target_file = os.path.join(lvmcore_dir, 'surveydesign/baseline.yaml')
     else:
         target_file = target
 

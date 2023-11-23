@@ -417,7 +417,7 @@ class IFU(object):
         return [subifu.get_patch(**kwargs) for subifu in self.subifus]
 
     def get_ifu_size(self, scale, tile_overlap, sparse):
-        '''Returns the size of the IFU in degrees
+        '''Returns the radius of the IFU in degrees
 
         Calculate and return the size of the IFU in degrees in two dimensions, the
         first from center to corner of the hexagon (outer radius), the second from 
@@ -437,7 +437,7 @@ class IFU(object):
         Returns:
         --------
         dx, dy : tuple of float
-            The extent of the hexagonal IFU in degrees from center to corner and center to edge
+            The radius of the hexagonal IFU in degrees from center to corner and center to edge
             scaled by the desired overlap.
         '''
         assert len(self.subifus)==1, "Size of ifus with subunits not implemented."
