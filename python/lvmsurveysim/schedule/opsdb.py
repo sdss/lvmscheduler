@@ -189,7 +189,7 @@ class OpsDB(object):
         else:
             dither_pos, created = Dither.get_or_create(tile_id=tile_id, position=dither)
             dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
-            dither_stat.update(done=True, by_pipeline=False).execute()
+            CompletionStatus.update(done=True, by_pipeline=False).where(CompletionStatus.dither == dither_pos).execute()
 
             obs = Observation.create(dither=dither_pos,
                                      jd=jd,
