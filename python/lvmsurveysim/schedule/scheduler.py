@@ -149,7 +149,7 @@ class Scheduler(object):
                      & (self.lunation <= self.tiledb['lunation_limit'].data)
         
         self.logMsg = ""
-        self.logfile = os.path.join(logDir, f"{int(jd-2400000.5)}_sched.log")
+        self.logFile = os.path.join(logDir, f"{int(jd-2400000.5)}_sched.log")
 
     def get_optimal_tile(self, jd, observed, done=None):
         """Returns the next tile to observe at a given (float) jd.
@@ -207,6 +207,10 @@ class Scheduler(object):
         if len(tdb) != len(observed):
             raise LVMSurveyOpsError(f'length of tiledb {len(tdb)} != length of observed array {len(observed)}.')
 
+        # current time, UTC, for logs
+        now = Time.now()
+        time_formatted = now.utc.strftime("%Y/%m/%d, %H:%M:%S")
+
         # Get current LST
         lst = lvmsurveysim.utils.spherical.get_lst(jd, self.lon)
 
@@ -252,7 +256,7 @@ class Scheduler(object):
         if len(valid_idx) == 0:
             valid_idx = np.where(np.logical_and(valid_mask, tdb["target"] == "FULL_SKY"))[0]
             if len(valid_idx) == 0:
-                self.logMsg += f"{jd:.2f} nothing observable"
+                self.logMsg += f"{time_formatted} nothing observable"
                 self.logMsg += f"max hz {np.max(hz):.1f}, "
                 self.logMsg += f"max alt {np.max(alt_start):.1f} \n"
                 with open(self.logFile, "a") as logging:
@@ -264,7 +268,7 @@ class Scheduler(object):
 
             observed_idx = valid_idx[max_hz_idx]
 
-            self.logMsg += f"{jd:.2f} shadow height ignored, "
+            self.logMsg += f"{time_formatted} shadow height ignored, "
             self.logMsg += f"max hz {hz[observed_idx]:.1f}, "
             self.logMsg += f"max alt {alt_start[observed_idx]:.1f}, "
             self.logMsg += f"tile_id {tdb['tile_id'].data[observed_idx]} \n"
@@ -319,7 +323,7 @@ class Scheduler(object):
             # Gets the index of the pointing in the master list.
             observed_idx = valid_idx[valid_priority_idx[obs_tile_idx]]
 
-            self.logMsg += f"{jd:.2f} success, "
+            self.logMsg += f"{time_formatted} success, "
             self.logMsg += f"max hz {hz[observed_idx]:.1f}, "
             self.logMsg += f"max alt {obs_alt:.1f}, "
             self.logMsg += f"tile_id {tdb['tile_id'].data[observed_idx]} \n"
