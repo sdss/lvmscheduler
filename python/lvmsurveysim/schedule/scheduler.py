@@ -254,7 +254,7 @@ class Scheduler(object):
 
         # If there's nothing to observe, return -1
         if len(valid_idx) == 0:
-            valid_idx = np.where(np.logical_and(valid_mask, tdb["target"] == "FULL_SKY"))[0]
+            valid_idx = np.where(np.logical_and(valid_mask, tdb["target"] == "FULLSKY"))[0]
             if len(valid_idx) == 0:
                 self.logMsg += f"{time_formatted} nothing observable"
                 self.logMsg += f"max hz {np.max(hz):.1f}, "
@@ -262,7 +262,7 @@ class Scheduler(object):
                 with open(self.logFile, "a") as logging:
                     print(self.logMsg, file=logging)
                 return -1, lst, 0, 0, self.lunation
-            
+
             ignore_hz = hz[valid_idx]
             max_hz_idx = np.argmax(ignore_hz)
 
