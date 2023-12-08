@@ -23,6 +23,9 @@ from lvmsurveysim.utils import shadow_height_lib
 if os.getenv("OBSERVATORY") == "LCO":
     # mostly helps for sims
     from lvmsurveysim.schedule.opsdb import OpsDB
+    logDir = "/data/logs/lvmscheduler/"
+else:
+    logDir = ""
 
 np.seterr(invalid='raise')
 
@@ -144,6 +147,9 @@ class Scheduler(object):
         # moon avoidance.
         self.moon_ok = (self.moon_to_pointings > self.tiledb['moon_distance_limit'].data)\
                      & (self.lunation <= self.tiledb['lunation_limit'].data)
+        
+        self.logMsg = ""
+        self.logFile = os.path.join(logDir, f"{int(jd-2400000.5)}_sched.log")
 
     def get_optimal_tile(self, jd, observed, done=None):
         """Returns the next tile to observe at a given (float) jd.
@@ -201,6 +207,10 @@ class Scheduler(object):
         if len(tdb) != len(observed):
             raise LVMSurveyOpsError(f'length of tiledb {len(tdb)} != length of observed array {len(observed)}.')
 
+        # current time, UTC, for logs
+        now = Time.now()
+        time_formatted = now.utc.strftime("%Y/%m/%d, %H:%M:%S")
+
         # Get current LST
         lst = lvmsurveysim.utils.spherical.get_lst(jd, self.lon)
 
@@ -229,9 +239,13 @@ class Scheduler(object):
         valid_mask = alt_ok & self.moon_ok & airmass_ok & ~done & dec_ok
 
         # calculate shadow heights, but only for the viable pointings since it is a costly computation
+        # hz = np.full(len(alt_ok), 0.0)
+        # hz_valid = self.shadow_calc.get_heights(return_heights=True, mask=valid_mask, unit="km")
+        # hz[valid_mask] = hz_valid
+        # hz_ok = (hz > tdb['hz_limit'].data)
+
         hz = np.full(len(alt_ok), 0.0)
-        hz_valid = self.shadow_calc.get_heights(return_heights=True, mask=valid_mask, unit="km")
-        hz[valid_mask] = hz_valid
+        hz = self.shadow_calc.get_heights(return_heights=True, unit="km")
         hz_ok = (hz > tdb['hz_limit'].data)
 
         # add shadow height to the viability criteria of the pointings to create the final 
@@ -240,7 +254,28 @@ class Scheduler(object):
 
         # If there's nothing to observe, return -1
         if len(valid_idx) == 0:
-            return -1, lst, 0, 0, self.lunation
+            valid_idx = np.where(np.logical_and(valid_mask, tdb["target"] == "FULLSKY"))[0]
+            if len(valid_idx) == 0:
+                self.logMsg += f"{time_formatted} nothing observable"
+                self.logMsg += f"max hz {np.max(hz):.1f}, "
+                self.logMsg += f"max alt {np.max(alt_start):.1f} \n"
+                with open(self.logFile, "a") as logging:
+                    print(self.logMsg, file=logging)
+                return -1, lst, 0, 0, self.lunation
+
+            ignore_hz = hz[valid_idx]
+            max_hz_idx = np.argmax(ignore_hz)
+
+            observed_idx = valid_idx[max_hz_idx]
+
+            self.logMsg += f"{time_formatted} shadow height ignored, "
+            self.logMsg += f"max hz {hz[observed_idx]:.1f}, "
+            self.logMsg += f"max alt {alt_start[observed_idx]:.1f}, "
+            self.logMsg += f"tile_id {tdb['tile_id'].data[observed_idx]} \n"
+            with open(self.logFile, "a") as logging:
+                print(self.logMsg, file=logging)
+
+            return observed_idx, lst, hz[observed_idx], alt_start[observed_idx], self.lunation
 
         # Find observations that have nonzero exposure but are incomplete
         incomplete = (observed > 0) & (~done)
@@ -287,6 +322,13 @@ class Scheduler(object):
 
             # Gets the index of the pointing in the master list.
             observed_idx = valid_idx[valid_priority_idx[obs_tile_idx]]
+
+            self.logMsg += f"{time_formatted} success, "
+            self.logMsg += f"max hz {hz[observed_idx]:.1f}, "
+            self.logMsg += f"max alt {obs_alt:.1f}, "
+            self.logMsg += f"tile_id {tdb['tile_id'].data[observed_idx]} \n"
+            with open(self.logFile, "a") as logging:
+                print(self.logMsg, file=logging)
 
             return observed_idx, lst, hz[observed_idx], obs_alt, self.lunation
 
