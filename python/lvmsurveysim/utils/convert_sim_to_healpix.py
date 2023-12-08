@@ -57,6 +57,7 @@ def convert(coversion_params):
 
     healpix_dictionary['priorities'] =  np.full(npix, -1)
     healpix_dictionary['priority_levels'] = np.sort(np.unique(schedule['priority']))
+    # iterate over target priorities from lowest to highest
     for priority_level in healpix_dictionary['priority_levels']:
         t0 = time.time()
         priority_mask = (schedule['priority'] == priority_level) * (schedule['target'] != "-")
@@ -65,7 +66,9 @@ def convert(coversion_params):
         tmp = tmp0
         print("processing priority level: %i"%(priority_level))
         for ra, dec in zip(schedule['ra'][priority_mask], schedule['dec'][priority_mask]):
+            # find healpix pixels that cover ra,dec of target tiles
             heal_indices = hp.cone_search_skycoord(SkyCoord(ra, dec, unit=u.deg), radius=(0.25)*u.deg)
+            # assign the target priority to these healpix pixels
             healpix_dictionary['priorities'][heal_indices] = priority_level
             complete = 1.- float(tmp)/float(tmp0)
             tmp = tmp -1
@@ -158,12 +161,16 @@ def healpix_shader(data,
     normalized_I = I #np.full(len(I), -1.6375e+30) # start with MW Halpha background
 
     # add the offset to the data to push it into to each color range
+    # 0-1 is the 0-th background image, 1-2 the first target, etc ...
     if scale is not False:
         for i in range(len(masks)):
             normalized_I[masks[i]] = I[masks[i]].copy()*scale[i] + min(i, len(cmaps)-1) * norm
     else:
         for i in range(len(masks)):
             normalized_I[masks[i]] = I[masks[i]].copy() + min(i, len(cmaps)-1) * norm
+
+    # deal with the lowest priority separately, the loop above misses it
+    normalized_I[masks[0]] = 1.75
 
     # If there is a healpix mask apply it.
     normalized_I_masked = healpy.ma(normalized_I)
@@ -225,8 +232,8 @@ def run(params):
 # convert_sim_to_healpix file:LCO_2023_5.fits target_file:targets.yaml nside:1024
 if __name__ == "__main__":
     "provide the schedule fits file, and target list"
-    params = {"file":None, "target_file":"None", "nside":1024}
-
+    # params = {"file":None, "target_file":"None", "nside":1024}
+    params = {"file": "baseline_beta-0.fits", "target_file": "targets.yaml", "nside": 1024}
 
     if len(sys.argv) > 1:
         for argument in sys.argv[1:]:
