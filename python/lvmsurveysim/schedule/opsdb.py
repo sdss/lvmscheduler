@@ -82,7 +82,7 @@ class OpsDB(object):
 
         allRows = Tile.select()\
                       .where(Tile.version_pk == ver.pk,
-                             Tile.tile_priority > 0)\
+                             not Tile.disabled)\
                       .order_by(Tile.tile_id.asc())
 
         dataframe = pd.DataFrame(allRows.dicts())
