@@ -251,6 +251,11 @@ class OpsDB(object):
         enable or disable a tile
         """
 
+        # TODO: this is a bit hacky
+        # maybe make admin user default?
+        Tile._meta.database.connect()
+        Tile._meta.database.become_admin()
+
         N = Tile.update(disabled=disable)\
                 .where(Tile.tile_id==tile_id).execute()
 
