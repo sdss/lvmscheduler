@@ -244,3 +244,14 @@ class OpsDB(object):
         tile = Tile.get(tile_id=tile_id)
 
         return tile.__data__
+
+    @classmethod
+    def update_tile_status(cls, tile_id, disable=True):
+        """
+        enable or disable a tile
+        """
+
+        N = Tile.update(disabled=disable)\
+                .where(Tile.tile_id==tile_id).execute()
+
+        return N

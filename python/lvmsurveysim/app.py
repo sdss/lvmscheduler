@@ -172,3 +172,16 @@ async def register_observation(observation: Observation):
     logger.info(f"register observation reported {success}")
 
     return {"success": success}
+
+@app.put("/tile_status/")
+async def tile_status(tile_id: int,
+                      disable: bool = True):
+    """
+    enable or disable a tile
+    """
+
+    N = await wrapBlocking(OpsDB.update_tile_status,
+                           tile_id, disable=disable)
+
+    return {"tile_id": tile_id,
+            "success": N == 1}
