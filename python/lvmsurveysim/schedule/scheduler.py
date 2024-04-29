@@ -466,6 +466,14 @@ class Cals(object):
                               observatory_elevation=self.location.height,
                               observatory_lat=self.lat, observatory_lon=self.lon,
                               eph=eph, earth=eph['earth'], sun=eph['sun'])
+        
+        sunpos, moonpos, moonphase = get_sun_moon_data(self.jd)
+
+        self.moon_coords = {"ra": moonpos.ra.deg, "dec": moonpos.dec.deg}
+        if moonphase > 0.9:
+            self.moon_limit = 60
+        else:
+            self.moon_limit = 45
 
     @property
     def skies(self):
@@ -475,7 +483,15 @@ class Cals(object):
                                     all_skies["dec"].data,
                                     self.lon, self.lat)
             alt = ac(lst=self.lst)
-            self._skies = all_skies[alt > self.altitude_limit]
+
+            moon_to_pointings = lvmsurveysim.utils.spherical.great_circle_distance(
+                                 self.moon_coords['ra'], self.moon_coords['dec'],
+                                 all_skies["ra"].data, all_skies["dec"].data)
+            
+            mask = np.logical_and(moon_to_pointings > self.moon_limit,
+                                  alt > self.altitude_limit)
+
+            self._skies = all_skies[mask]
         return self._skies
 
     @property
@@ -486,7 +502,15 @@ class Cals(object):
                                     all_standards["dec"].data,
                                     self.lon, self.lat)
             alt = ac(lst=self.lst)
-            self._standards = all_standards[alt > self.altitude_limit]
+
+            moon_to_pointings = lvmsurveysim.utils.spherical.great_circle_distance(
+                                 self.moon_coords['ra'], self.moon_coords['dec'],
+                                 all_standards["ra"].data, all_standards["dec"].data)
+            
+            mask = np.logical_and(moon_to_pointings > self.moon_limit,
+                                  alt > self.altitude_limit)
+
+            self._standards = all_standards[mask]
         return self._standards
 
     def darkSky(self):
