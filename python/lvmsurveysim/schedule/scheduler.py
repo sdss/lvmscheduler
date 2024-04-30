@@ -10,6 +10,8 @@ import os
 import numpy as np
 from astropy.time import Time
 from astropy.coordinates import EarthLocation
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 import lvmsurveysim.target
 from lvmsurveysim.schedule.plan import ObservingPlan, get_sun_moon_data
@@ -470,7 +472,8 @@ class Cals(object):
         sunpos, moonpos, moonphase = get_sun_moon_data(self.jd)
 
         self.moon_coords = {"ra": moonpos.ra.deg, "dec": moonpos.dec.deg}
-        if moonphase > 0.9:
+        self.moonphase = moonphase
+        if self.moonphase > 0.9:
             self.moon_limit = 60
         else:
             self.moon_limit = 45
@@ -520,6 +523,9 @@ class Cals(object):
         lst = lvmsurveysim.utils.spherical.get_lst(self.jd, self.lon)
 
         darkest = self.skies[self.skies["darkest_wham_flag"]]
+    
+        if len(darkest) == 0:
+            return -1
 
         ac = AltitudeCalculator(darkest["ra"].data,
                                 darkest["dec"].data,
@@ -528,7 +534,7 @@ class Cals(object):
 
         pk = darkest[np.argmin(am)]["pk"]
 
-        return np.where(self.skies["pk"] == pk)
+        return np.where(self.skies["pk"] == pk)[0]
 
     def closeSky(self):
         other = self.skies[~self.skies["darkest_wham_flag"]]
@@ -537,7 +543,18 @@ class Cals(object):
         
         pk = other[np.argmin(targ_dist)]["pk"]
 
-        return np.where(self.skies["pk"] == pk)
+        return np.where(self.skies["pk"] == pk)[0]
+
+    def backupSky(self):
+        coords = SkyCoord(self.skies["ra"].data*u.degree,
+                          self.skies["dec"].data*u.degree, frame="fk5")
+        backups = self.skies[coords.galactic.b.degree > 15]
+        targ_dist = self.center_distance(backups["ra"].data,
+                                         backups["dec"].data)
+
+        pks = backups[np.argsort(targ_dist)[0:2]]["pk"]
+
+        return np.where(np.in1d(self.skies["pk"], pks))[0]
 
     def center_distance(self, ra, dec):
         assert len(ra) == len(dec), "ra and dec must be same length"
@@ -547,16 +564,25 @@ class Cals(object):
 
     def choose_skies(self):
 
-        dark = self.skies[self.darkSky()]
-        close = self.skies[self.closeSky()]
+        close_idx = int(self.closeSky())
+        dark_idx = int(self.darkSky())
+        if dark_idx == -1:
+            backups = self.backupSky()
+            if backups[0] == close_idx:
+                dark_idx = int(backups[1])
+            else:
+                dark_idx = int(backups[0])
+            print("backup!")
+        dark = self.skies[dark_idx]
+        close = self.skies[close_idx]
 
         # look at all that casting
         # why astropy, why?
 
         pos = [[float(dark["ra"]), float(dark["dec"])], [float(close["ra"]), float(close["dec"])]]
         pk = [int(dark["pk"]), int(close["pk"])]
-        names = [str(dark["name"].value[0]).strip(),
-                 str(close["name"].value[0]).strip()]
+        names = [str(dark["name"]).strip(),
+                 str(close["name"]).strip()]
 
         if np.random.rand() < 0.5:
             pos = [pos[1], pos[0]]
