@@ -587,6 +587,7 @@ class Cals(object):
         if np.random.rand() < 0.5:
             pos = [pos[1], pos[0]]
             pk = [pk[1], pk[0]]
+            names = [names[1], names[0]]
 
         return pk, pos, names
 
