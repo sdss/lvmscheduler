@@ -490,7 +490,7 @@ class Cals(object):
             moon_to_pointings = lvmsurveysim.utils.spherical.great_circle_distance(
                                  self.moon_coords['ra'], self.moon_coords['dec'],
                                  all_skies["ra"].data, all_skies["dec"].data)
-            
+
             mask = np.logical_and(moon_to_pointings > self.moon_limit,
                                   alt > self.altitude_limit)
 
@@ -549,6 +549,9 @@ class Cals(object):
         coords = SkyCoord(self.skies["ra"].data*u.degree,
                           self.skies["dec"].data*u.degree, frame="fk5")
         backups = self.skies[coords.galactic.b.degree > 15]
+        if len(backups) < 2:
+            print("No skies away from the plane, allowing skies in galactic plane")
+            backups = self.skies
         targ_dist = self.center_distance(backups["ra"].data,
                                          backups["dec"].data)
 
