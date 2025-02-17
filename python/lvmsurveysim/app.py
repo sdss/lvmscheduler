@@ -177,11 +177,14 @@ async def register_observation(observation: Observation):
 async def tile_status(tile_id: int,
                       disable: bool = True):
     """
-    enable or disable a tile
+    disable a tile
+    
+    disable kwarg is from previous implementation,
+    who knows if it's used anywhere, leave for legacy
     """
 
     N = await wrapBlocking(OpsDB.update_tile_status,
-                           tile_id, disable=disable)
+                           tile_id)
 
     return {"tile_id": tile_id,
-            "success": N == 1}
+            "success": N > 0}

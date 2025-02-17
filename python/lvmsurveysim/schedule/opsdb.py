@@ -83,18 +83,26 @@ class OpsDB(object):
         else:
             ver = Version.get(label=os.getenv("TILE_VER"))
 
+        allRows = Tile.select()\
+                      .where(Tile.version_pk == ver.pk)\
+                      .order_by(Tile.tile_id.asc())
+
         dquery = Disabled.select().dicts()
-        t_ids, t_count = np.unique([d["tile"] for d in dquery], return_counts=True)
         tonight = datetime.now() - timedelta(hours=12)
+
+        disabled_ids = np.array([d["tile"] for d in dquery])
         recent = [d["time_stamp"] > tonight for d in dquery]
+        recent_ids = disabled_ids[np.where(recent)]
 
-        w_reject = np.where(np.logical_or(recent, t_count > 5))
+        t_ids, t_count = np.unique([d["tile"] for d in dquery],
+                                   return_counts=True)
+        failed_alot = t_ids[np.where(t_count > 5)]
 
-        reject_ids = t_ids[w_reject]
-
-        cut = np.invert(dataframe["tile_id"].isin(reject_ids))
+        reject_ids = np.union1d(recent_ids, failed_alot)
 
         dataframe = pd.DataFrame(allRows.dicts())
+
+        cut = np.invert(dataframe["tile_id"].isin(reject_ids))
 
         return Table.from_pandas(dataframe[cut])
 
@@ -255,17 +263,16 @@ class OpsDB(object):
         return tile.__data__
 
     @classmethod
-    def update_tile_status(cls, tile_id, disable=True):
+    def update_tile_status(cls, tile_id):
         """
-        enable or disable a tile
+        disable a tile
         """
 
         # TODO: this is a bit hacky
         # maybe make admin user default?
-        Tile._meta.database.connect()
-        Tile._meta.database.become_admin()
+        Disabled._meta.database.connect()
+        Disabled._meta.database.become_admin()
 
-        N = Tile.update(disabled=disable)\
-                .where(Tile.tile_id==tile_id).execute()
+        newpk = Disabled.insert({"tile_id": tile_id}).execute()
 
-        return N
+        return newpk
