@@ -8,11 +8,14 @@
 
 
 # operations database and data classes for a survey tile and a survey observation
+from datetime import datetime, timedelta
 import os
+
 import pandas as pd
 from astropy.table import Table
-from astropy.time import Time 
+from astropy.time import Time
 from peewee import fn
+import numpy as np
 
 from lvmsurveysim import __version__ as schedVer
 import lvmsurveysim.utils.sqlite2astropy as s2a
@@ -25,7 +28,7 @@ from sdssdb.peewee.lvmdb.lvmopsdb import (Tile, Sky, Standard, Observation,
                                           CompletionStatus, Dither, Exposure,
                                           ExposureFlavor, ObservationToStandard,
                                           ObservationToSky, Weather,
-                                          Version)
+                                          Version, Disabled)
 
 
 class OpsDB(object):
@@ -80,14 +83,20 @@ class OpsDB(object):
         else:
             ver = Version.get(label=os.getenv("TILE_VER"))
 
-        allRows = Tile.select()\
-                      .where(Tile.version_pk == ver.pk,
-                             ~ Tile.disabled)\
-                      .order_by(Tile.tile_id.asc())
+        dquery = Disabled.select().dicts()
+        t_ids, t_count = np.unique([d["tile"] for d in dquery], return_counts=True)
+        tonight = datetime.now() - timedelta(hours=12)
+        recent = [d["time_stamp"] > tonight for d in dquery]
+
+        w_reject = np.where(np.logical_or(recent, t_count > 5))
+
+        reject_ids = t_ids[w_reject]
+
+        cut = np.invert(dataframe["tile_id"].isin(reject_ids))
 
         dataframe = pd.DataFrame(allRows.dicts())
 
-        return Table.from_pandas(dataframe)
+        return Table.from_pandas(dataframe[cut])
 
     @classmethod
     def load_sky(cls, ra=None, dec=None, radius=None, version=None):
