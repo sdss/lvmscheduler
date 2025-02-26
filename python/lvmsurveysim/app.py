@@ -175,6 +175,7 @@ async def register_observation(observation: Observation):
 
 @app.put("/tile_status/")
 async def tile_status(tile_id: int,
+                      note: str = None,
                       disable: bool = True):
     """
     disable a tile
@@ -184,7 +185,7 @@ async def tile_status(tile_id: int,
     """
 
     N = await wrapBlocking(OpsDB.update_tile_status,
-                           tile_id)
+                           tile_id, note=note)
 
     return {"tile_id": tile_id,
             "success": N > 0}

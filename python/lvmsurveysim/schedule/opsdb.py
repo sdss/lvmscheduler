@@ -263,7 +263,7 @@ class OpsDB(object):
         return tile.__data__
 
     @classmethod
-    def update_tile_status(cls, tile_id):
+    def update_tile_status(cls, tile_id, note=None):
         """
         disable a tile
         """
@@ -273,6 +273,7 @@ class OpsDB(object):
         Disabled._meta.database.connect()
         Disabled._meta.database.become_admin()
 
-        newpk = Disabled.insert({"tile_id": tile_id}).execute()
+        newpk = Disabled.insert({"tile_id": tile_id,
+                                 "note": note}).execute()
 
         return newpk
