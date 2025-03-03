@@ -273,7 +273,10 @@ class OpsDB(object):
         Disabled._meta.database.connect()
         Disabled._meta.database.become_admin()
 
+        time_stamp = datetime.now()
+
         newpk = Disabled.insert({"tile_id": tile_id,
+                                 "time_stamp": time_stamp,
                                  "note": note}).execute()
 
         return newpk
