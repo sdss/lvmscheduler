@@ -23,7 +23,7 @@ from lvmsurveysim import config
 __all__ = ['ObservingPlan', 'get_sun_moon_data']
 
 
-numpy.random.seed(seed=42)  # For reproducible results
+# numpy.random.seed(seed=42)  # For reproducible results
 
 _delta_dt = datetime.timedelta(days=1)
 

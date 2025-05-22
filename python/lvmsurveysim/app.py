@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 format = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 LOGFILE = "/data/logs/lvmscheduler/current.log"
-fh = RotatingFileHandler(LOGFILE, maxBytes=(1048576 * 5), backupCount=7)
+fh = RotatingFileHandler(LOGFILE, maxBytes=(500 * 1e3), backupCount=7)
 fh.setFormatter(format)
 logger.addHandler(fh)
 
@@ -172,3 +172,20 @@ async def register_observation(observation: Observation):
     logger.info(f"register observation reported {success}")
 
     return {"success": success}
+
+@app.put("/tile_status/")
+async def tile_status(tile_id: int,
+                      note: str = None,
+                      disable: bool = True):
+    """
+    disable a tile
+    
+    disable kwarg is from previous implementation,
+    who knows if it's used anywhere, leave for legacy
+    """
+
+    N = await wrapBlocking(OpsDB.update_tile_status,
+                           tile_id, note=note)
+
+    return {"tile_id": tile_id,
+            "success": N > 0}
