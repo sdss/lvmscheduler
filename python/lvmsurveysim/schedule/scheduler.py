@@ -370,7 +370,7 @@ class Atomic(object):
 
     def __init__(self):
         survey_start = 2459458
-        survey_end = 2460856
+        survey_end = 2461772
 
         self.observing_plan = ObservingPlan(survey_start, survey_end, observatory='LCO')
         self._tiledb = None
