@@ -479,6 +479,16 @@ class Cals(object):
             self.moon_limit = 45
 
     @property
+    def targ_moon_dist(self):
+        """
+        Returns the distance to the moon in degrees
+        """
+        dist = lvmsurveysim.utils.spherical.great_circle_distance(
+                self.moon_coords['ra'], self.moon_coords['dec'],
+                self.ra, self.dec)
+        return float(dist)
+
+    @property
     def skies(self):
         if self._skies is None:
             all_skies = OpsDB.load_sky()
@@ -518,7 +528,7 @@ class Cals(object):
 
     def darkSky(self):
         """
-        Return inded of the WHAM darkest field with lowest airmass
+        Return index of the WHAM darkest field with lowest airmass
         """
         lst = lvmsurveysim.utils.spherical.get_lst(self.jd, self.lon)
 
@@ -537,6 +547,10 @@ class Cals(object):
         return np.where(self.skies["pk"] == pk)[0]
 
     def closeSky(self):
+        if len(self.skies) < 2:
+            self.moon_limit = self.targ_moon_dist
+            self._skies = None
+
         other = self.skies[~self.skies["darkest_wham_flag"]]
         targ_dist = self.center_distance(other["ra"].data,
                                          other["dec"].data)
