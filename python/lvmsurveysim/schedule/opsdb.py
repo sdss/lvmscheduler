@@ -28,7 +28,7 @@ from sdssdb.peewee.lvmdb.lvmopsdb import (Tile, Sky, Standard, Observation,
                                           CompletionStatus, Dither, Exposure,
                                           ExposureFlavor, ObservationToStandard,
                                           ObservationToSky, Weather,
-                                          Version, Disabled)
+                                          Version, Disabled, Redo, RedoObs)
 
 
 class OpsDB(object):
@@ -190,6 +190,23 @@ class OpsDB(object):
         return None
 
     @classmethod
+    def load_redo(cls):
+        """
+        Grab tiles that can be redone and a list of re-done tiles
+        """
+
+        redo_q = Redo.select(Redo.tile, Redo.nexp).dicts()
+        redo_list = {r["tile"]: r["nexp"] for r in redo_q}
+
+        redo_obs_q = RedoObs.select(Dither.tile_id, fn.count(Observation.obs_id))\
+                            .join(Observation)\
+                            .join(Dither)\
+                           .group_by(Dither.tile_id).dicts()
+        redo_obs = {r["tile_id"]: r["count"] for r in redo_obs_q}
+
+        return redo_list, redo_obs
+
+    @classmethod
     def add_observation(cls, tile_id=None, exposure_no=None, 
                         dither=0, jd=0.0, exposure_time=900,
                         seeing=10.0, standards=[], skies=[],
@@ -214,7 +231,7 @@ class OpsDB(object):
                                      hz=hz,
                                      alt=alt,
                                      lunation=lunation)
-            
+
             Weather.create(obs_id=obs.obs_id, seeing=seeing)
 
         sciece_flavor = ExposureFlavor.get(label="Science")

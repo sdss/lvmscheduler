@@ -257,27 +257,37 @@ class Scheduler(object):
         # If there's nothing to observe, return -1
         if len(valid_idx) == 0:
             valid_idx = np.where(np.logical_and(valid_mask, tdb["target"] == "FULLSKY"))[0]
+            if len(valid_idx) > 0:
+                ignore_hz = hz[valid_idx]
+                max_hz_idx = np.argmax(ignore_hz)
+
+                observed_idx = valid_idx[max_hz_idx]
+
+                self.logMsg += f"{time_formatted} shadow height ignored, "
+                self.logMsg += f"max hz {hz[observed_idx]:.1f}, "
+                self.logMsg += f"max alt {alt_start[observed_idx]:.1f}, "
+                self.logMsg += f"tile_id {tdb['tile_id'].data[observed_idx]} \n"
+                with open(self.logFile, "a") as logging:
+                    print(self.logMsg, file=logging)
+
+                return observed_idx, lst, hz[observed_idx], alt_start[observed_idx], self.lunation
+            else:
+                redo_list, redo_obs = OpsDB.load_redo()
+                redo_tiles = [tile for tile, n in redo_list.items() if n > redo_obs.get(tile, 0)]
+                alter_idx = np.where(np.isin(tdb["tile_id"].data, redo_tiles))[0]
+                for idx in alter_idx:
+                    done[idx] = False
+                valid_mask = alt_ok & self.moon_ok & airmass_ok & ~done & dec_ok
+                valid_idx = np.where(valid_mask & hz_ok)[0]
             if len(valid_idx) == 0:
-                self.logMsg += f"{time_formatted} nothing observable"
+                # valid_sky = np.where(alt_ok & self.moon_ok & airmass_ok & dec_ok)[0]
+                # print(f"{time_formatted} No valid targets, {len(valid_sky)} observable but done")
+                self.logMsg += f"{time_formatted} nothing observable "
                 self.logMsg += f"max hz {np.max(hz):.1f}, "
                 self.logMsg += f"max alt {np.max(alt_start):.1f} \n"
                 with open(self.logFile, "a") as logging:
                     print(self.logMsg, file=logging)
                 return -1, lst, 0, 0, self.lunation
-
-            ignore_hz = hz[valid_idx]
-            max_hz_idx = np.argmax(ignore_hz)
-
-            observed_idx = valid_idx[max_hz_idx]
-
-            self.logMsg += f"{time_formatted} shadow height ignored, "
-            self.logMsg += f"max hz {hz[observed_idx]:.1f}, "
-            self.logMsg += f"max alt {alt_start[observed_idx]:.1f}, "
-            self.logMsg += f"tile_id {tdb['tile_id'].data[observed_idx]} \n"
-            with open(self.logFile, "a") as logging:
-                print(self.logMsg, file=logging)
-
-            return observed_idx, lst, hz[observed_idx], alt_start[observed_idx], self.lunation
 
         # Find observations that have nonzero exposure but are incomplete
         incomplete = (observed > 0) & (~done)
