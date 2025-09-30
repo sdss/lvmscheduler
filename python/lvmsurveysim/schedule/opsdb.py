@@ -28,7 +28,7 @@ from sdssdb.peewee.lvmdb.lvmopsdb import (Tile, Sky, Standard, Observation,
                                           CompletionStatus, Dither, Exposure,
                                           ExposureFlavor, ObservationToStandard,
                                           ObservationToSky, Weather,
-                                          Version, Disabled, Redo, RedoObs)
+                                          Version, Disabled, Redo)
 
 
 class OpsDB(object):
@@ -198,11 +198,10 @@ class OpsDB(object):
         redo_q = Redo.select(Redo.tile, Redo.nexp).dicts()
         redo_list = {r["tile"]: r["nexp"] for r in redo_q}
 
-        redo_obs_q = RedoObs.select(Dither.tile_id, fn.count(Observation.obs_id))\
+        redo_obs_q = Dither.select(Dither.tile_id, fn.count(Observation.obs_id))\
                             .join(Observation)\
-                            .join(Dither)\
                            .group_by(Dither.tile_id).dicts()
-        redo_obs = {r["tile_id"]: r["count"] for r in redo_obs_q}
+        redo_obs = {r["tile"]: r["count"] - 1 for r in redo_obs_q}
 
         return redo_list, redo_obs
 
@@ -221,7 +220,7 @@ class OpsDB(object):
         if tile_id is None:
             obs = None
         else:
-            dither_pos, created = Dither.get_or_create(tile_id=tile_id, position=dither)
+            dither_pos, dither_created = Dither.get_or_create(tile_id=tile_id, position=dither)
             dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
             CompletionStatus.update(done=True, by_pipeline=False).where(CompletionStatus.dither == dither_pos).execute()
 

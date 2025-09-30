@@ -272,13 +272,14 @@ class Scheduler(object):
 
                 return observed_idx, lst, hz[observed_idx], alt_start[observed_idx], self.lunation
             else:
-                redo_list, redo_obs = OpsDB.load_redo()
-                redo_tiles = [tile for tile, n in redo_list.items() if n > redo_obs.get(tile, 0)]
-                alter_idx = np.where(np.isin(tdb["tile_id"].data, redo_tiles))[0]
-                for idx in alter_idx:
-                    done[idx] = False
-                valid_mask = alt_ok & self.moon_ok & airmass_ok & ~done & dec_ok
+                valid_mask = alt_ok & self.moon_ok & airmass_ok & dec_ok
                 valid_idx = np.where(valid_mask & hz_ok)[0]
+                if len(valid_idx) == 0:
+                    valid_idx = np.where(valid_mask)[0]
+                    self.logMsg += f"{time_formatted} ignoring shadow height \n"
+                self.logMsg += f"{time_formatted} allowed reobserving done tiles"
+                with open(self.logFile, "a") as logging:
+                    print(self.logMsg, file=logging)
             if len(valid_idx) == 0:
                 # valid_sky = np.where(alt_ok & self.moon_ok & airmass_ok & dec_ok)[0]
                 # print(f"{time_formatted} No valid targets, {len(valid_sky)} observable but done")
