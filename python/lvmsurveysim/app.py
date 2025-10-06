@@ -88,19 +88,21 @@ async def next_tile(jd: float | None = None):
     logger.info(f"pulling tile for JD {jd}")
 
     try:
-        tile_id, dither_pos, pos = await wrapBlocking(sched.next_tile, jd)
+        tile_id, dither_pos, pos, done = await wrapBlocking(sched.next_tile, jd)
         next_tile = {"tile_id": int(tile_id),
                      "jd": jd,
                      "dither_pos": dither_pos,
                      "tile_pos": pos,
                      "errors": errors,
-                     "coord_order": ["ra", "dec", "pa"]}
+                     "coord_order": ["ra", "dec", "pa"],
+                     "reobserved": done}
     except LVMSurveyOpsError as E:
         logger.warning(f"caught exception {E}")
 
         raise HTTPException(status_code=418, detail="There is a problem with the JD")
 
-    logger.info(f"tile {tile_id} with dither {dither_pos} JD {jd}")
+    logger.info(f"tile {tile_id} with dither {dither_pos} JD {jd}, reobserve {done}")
+
 
     return next_tile
 

@@ -426,15 +426,18 @@ class Atomic(object):
             self.scheduler.get_optimal_tile(jd, self.history)
 
         if idx == -1:
-            return -999, -1, [-999, -999, -999]
+            return -999, -1, [-999, -999, -999], False
 
         tdb = self.tiledb
 
         tile_id = tdb['tile_id'].data[idx]
         exptime = tdb['total_exptime'].data[idx]
         pos = [tdb['ra'].data[idx], tdb['dec'].data[idx], tdb['pa'].data[idx]]
+
+        done = bool(self.history[idx] >= exptime)
+
         if exptime == 900:
-            return tile_id, [0], pos
+            return tile_id, [0], pos, done
         done_pos = OpsDB.retrieve_tile_dithers(tile_id)
 
         all_dithers = set([0, 1, 2, 3, 4, 5, 6, 7, 8])
@@ -443,7 +446,7 @@ class Atomic(object):
 
         next_dither = remain_dither[:3]
 
-        return tile_id, next_dither, pos
+        return tile_id, next_dither, pos, False
 
 
 class Cals(object):
