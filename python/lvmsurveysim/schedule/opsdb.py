@@ -66,6 +66,13 @@ class OpsDB(object):
 
         s = s2a.astropy2peewee(tile_table, Tile)
         return s
+    
+    @classmethod
+    def max_tile_id(cls):
+        """return max tile_id, for loading new tiles"""
+
+        max_id = Tile.select(fn.max(Tile.tile_id)).scalar()
+        return max_id
 
     @classmethod
     def load_tiledb(cls, version=None):
