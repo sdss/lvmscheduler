@@ -440,9 +440,10 @@ class Atomic(object):
             return tile_id, [0], pos, done
         done_pos = OpsDB.retrieve_tile_dithers(tile_id)
 
-        all_dithers = set([0, 1, 2, 3, 4, 5, 6, 7, 8])
+        all_dithers = set([i for i in range(int(exptime / 900))])
 
         remain_dither = sorted(all_dithers.difference(done_pos))
+        remain_dither = [r % 9 for r in remain_dither]
 
         next_dither = remain_dither[:3]
 

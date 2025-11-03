@@ -227,8 +227,16 @@ class OpsDB(object):
         if tile_id is None:
             obs = None
         else:
-            dither_pos, dither_created = Dither.get_or_create(tile_id=tile_id, position=dither)
-            dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
+            old = True
+            # hardcode 3 max for now, double check that
+            n = 1
+            while old and n < 3:
+                dither_pos, dither_created = Dither.get_or_create(tile_id=tile_id, position=dither)
+                dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
+                old = not created and dither_stat.done
+                dither += 9
+                n += 1
+
             CompletionStatus.update(done=True, by_pipeline=False).where(CompletionStatus.dither == dither_pos).execute()
 
             obs = Observation.create(dither=dither_pos,
