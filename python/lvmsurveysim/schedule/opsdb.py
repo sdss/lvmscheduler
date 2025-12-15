@@ -230,10 +230,15 @@ class OpsDB(object):
             old = True
             # hardcode 3 max for now, double check that
             n = 1
+
+            tile = Tile.get(tile_id = tile_id)
+
+            nexp = tile.total_exptime / 900
+            
             while old and n < 3:
                 dither_pos, dither_created = Dither.get_or_create(tile_id=tile_id, position=dither)
                 dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
-                old = not created and dither_stat.done
+                old = not created and dither_stat.done and nexp <= dither
                 dither += 9
                 n += 1
 

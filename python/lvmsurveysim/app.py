@@ -88,14 +88,15 @@ async def next_tile(jd: float | None = None):
     logger.info(f"pulling tile for JD {jd}")
 
     try:
-        tile_id, dither_pos, pos, done = await wrapBlocking(sched.next_tile, jd)
+        tile_id, dither_pos, pos, done, ancillary = await wrapBlocking(sched.next_tile, jd)
         next_tile = {"tile_id": int(tile_id),
                      "jd": jd,
                      "dither_pos": dither_pos,
                      "tile_pos": pos,
                      "errors": errors,
                      "coord_order": ["ra", "dec", "pa"],
-                     "reobserved": done}
+                     "reobserved": done,
+                     "ancillary": ancillary}
     except LVMSurveyOpsError as E:
         logger.warning(f"caught exception {E}")
 
