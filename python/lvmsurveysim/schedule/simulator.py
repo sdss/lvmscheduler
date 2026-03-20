@@ -16,10 +16,9 @@ from matplotlib import animation
 import lvmsurveysim.target
 from lvmsurveysim.schedule.tiledb import TileDB
 from lvmsurveysim.schedule.scheduler import Scheduler
-from lvmsurveysim.schedule.plan import ObservingPlan
 from lvmsurveysim import IFU, config
 from lvmsurveysim.schedule.plan import ObservingPlan
-from lvmsurveysim.utils.plot import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
+from lvmsurveysim.utils import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
 
 
 numpy.seterr(invalid='raise')

@@ -18,7 +18,7 @@ from astropy.coordinates.angle_utilities import position_angle
 import lvmsurveysim
 from lvmsurveysim import config
 from lvmsurveysim.utils import plot as lvm_plot
-from lvmsurveysim.utils.plot import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
+from lvmsurveysim.utils import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
 
 
 __all__ = ['SQIFU', 'EqTransform']

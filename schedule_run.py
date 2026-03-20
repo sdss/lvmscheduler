@@ -32,24 +32,26 @@ def run(targets='./targets.yaml', tile=False, sim=False, plot=False, save=False)
    print('Creating observing plan ...')
    #lco_plan = ObservingPlan(2459458, 2460856, observatory='LCO') # baseline 2021
    #lco_plan = ObservingPlan(2459945, 2459945+365*3+182, observatory='LCO') # baseline 2023, 3.5yr
-   lco_plan = ObservingPlan(2459945, 2461555, observatory='LCO') # baseline 2023, until 30-May-2027
-
+   # lco_plan = ObservingPlan(2459945, 2461555, observatory='LCO') # baseline 2023, until 30-May-2027
+   lco_as5_plan = ObservingPlan(2461771, 2463597, observatory='LCO-AS5') # test 2028, until 12-Dec-2032
+   apo_as5_plan = ObservingPlan(2461771, 2463597, observatory='APO-AS5')  # test 2028, until 12-Dec-2032
+   ttt_as5_plan = ObservingPlan(2461771, 2463597, observatory='TTT-AS5')  # test 2028, until 12-Dec-2032
    if sim:
       # Creates an Simulator instance and runs the simulation
       print('Creating Simulator ...')
-      sim = Simulator(tiledb, observing_plan=lco_plan)
+      sim = Simulator(tiledb, observing_plan=apo_as5_plan)
       sim.run(progress_bar=True)
 
       # Load/Save from as FITS table in a later session, no need to rerun:
       # sim = Simulator.load('LCO_2023_4', 'lco_tiledb')
-      sim.save('LCO_2023_4', overwrite=True) # Save as FITS table
+      sim.save('APO_AS5', overwrite=True) # Save as FITS table
 
    if plot:
-      plot_survey(sim, basename='LCO_2023_4', save=save)
+      plot_survey(sim, basename='APO_AS5', save=save)
 
    return sim
 
-def plot_survey(sim, basename='LCO_2023_4', save=False):
+def plot_survey(sim, basename='APO_AS5', save=False):
    # Plot and print:
    sim.print_statistics()
    sim.plot_survey('LCO', use_groups=True)

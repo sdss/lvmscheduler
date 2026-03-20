@@ -19,10 +19,7 @@ from copy import deepcopy
 
 from spherical_geometry import polygon as sp
 from lvmsurveysim.utils import plot as lvm_plot
-from lvmsurveysim.exceptions import LVMSurveyOpsError, LVMSurveyOpsWarning
-
-from . import _VALID_FRAMES
-
+from lvmsurveysim.exceptions import LVMSurveyOpsError
 
 __all__ = ['SkyRegion']
 

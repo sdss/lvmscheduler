@@ -15,6 +15,10 @@ import warnings
 import astral
 import astropy
 import astropy.coordinates
+
+# cleaning cache is necessary for using TTT and CAHA observatories due to bug in astropy<8.0
+from astropy.utils.data import clear_download_cache
+
 import numpy
 
 from lvmsurveysim import config
@@ -132,7 +136,7 @@ class ObservingPlan(object):
             raise ValueError(f'invalid observatory {observatory!r}.')
 
         self.observatory = observatory
-        self.location = astropy.coordinates.EarthLocation.of_site(full_obs_name)
+        self.location = astropy.coordinates.EarthLocation.of_site(full_obs_name, refresh_cache=True)
 
         if float(astral.__version__.split(".")[0]) == 1:
             self._astral = astral.Astral()

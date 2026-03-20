@@ -21,8 +21,8 @@ import warnings
 from lvmsurveysim.ifu import IFU
 from lvmsurveysim.utils import plot as lvm_plot
 import lvmsurveysim.utils.spherical
-from lvmsurveysim.exceptions import LVMSurveyOpsError, LVMSurveyOpsWarning
-from lvmsurveysim.utils.plot import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
+from lvmsurveysim.exceptions import LVMSurveyOpsWarning
+from lvmsurveysim.utils import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
 
 from .. import config
 from ..telescope import Telescope

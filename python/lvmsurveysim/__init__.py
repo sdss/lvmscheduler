@@ -13,7 +13,7 @@
 
 import warnings
 
-from .utils.config import get_config
+from lvmsurveysim.utils import get_config
 
 
 config = get_config('~/.lvm/lvmsurveysim.yaml')
