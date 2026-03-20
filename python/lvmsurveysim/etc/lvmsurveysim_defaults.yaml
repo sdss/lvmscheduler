@@ -19,6 +19,21 @@ telescopes:
     LVM-1m:
         diameter: 1.
         f: 3.7
+    LVM-2500: # APO 2.5m
+        diameter: 2.5
+        f: 3.7
+    LVM-2000: # TTT 2.0m
+        diameter: 2.0
+        f: 3.7
+    LVM-2100: # McDonald 2.1m
+        diameter: 2.1
+        f: 3.7
+    LVM-2200: #  CA 2.2m;
+        diameter: 2.2
+        f: 3.7
+    LVM-2400: # MDM 2.4m
+        diameter: 2.4
+        f: 3.7
     LVM-160:
         diameter: 0.16
         f: 3.7
