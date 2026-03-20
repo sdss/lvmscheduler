@@ -112,6 +112,20 @@ class ObservingPlan(object):
 
         if observatory == 'APO':
             full_obs_name = 'Apache Point Observatory'
+        elif observatory == 'APO-AS5':
+            full_obs_name = 'Apache Point Observatory'
+        elif observatory == 'TTT-AS5':
+            full_obs_name = 'Observatorio del Teide'
+            # cleaning cache is necessary for using TTT and CAHA observatories due to bug in astropy<8.0
+            clear_download_cache()
+        elif observatory == 'MDM-AS5':
+            full_obs_name = 'MDM Observatory'
+        elif observatory == 'McD-AS5':
+            full_obs_name = 'McDonald Observatory'
+        elif observatory == 'CA-AS5':
+            full_obs_name = 'CAHA'
+            # cleaning cache is necessary for using TTT and CAHA observatories due to bug in astropy<8.0
+            clear_download_cache()
         elif observatory == 'LCO':
             full_obs_name = 'Las Campanas Observatory'
         else:
