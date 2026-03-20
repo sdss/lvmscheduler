@@ -12,13 +12,13 @@ import matplotlib.patches
 import matplotlib.pyplot
 import numpy
 import astropy.units
-from astropy.coordinates.angle_utilities import position_angle
+from astropy.coordinates.angles.utils import position_angle
 
 
 import lvmsurveysim
 from lvmsurveysim import config
 from lvmsurveysim.utils import plot as lvm_plot
-from lvmsurveysim.utils import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
+from lvmsurveysim.utils.plot import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
 
 
 __all__ = ['SQIFU', 'EqTransform']

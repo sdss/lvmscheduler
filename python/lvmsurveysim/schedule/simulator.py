@@ -18,7 +18,7 @@ from lvmsurveysim.schedule.tiledb import TileDB
 from lvmsurveysim.schedule.scheduler import Scheduler
 from lvmsurveysim import IFU, config
 from lvmsurveysim.schedule.plan import ObservingPlan
-from lvmsurveysim.utils import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
+from lvmsurveysim.utils.plot import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
 
 
 numpy.seterr(invalid='raise')
@@ -449,7 +449,7 @@ class Simulator(object):
 
         column = 'group' if group is True else 'target'
         t = self.schedule[self.schedule[column] == tname]
-
+        print(t['observatory'], observatory)
         if observatory:
             t = t[t['observatory'] == observatory]
 
@@ -526,11 +526,11 @@ class Simulator(object):
              numpy.around(target_ntiles_observed[t], decimals=2),
              numpy.around(time_on_target[t] / 3600.0, decimals=2),
              numpy.around(exptime_on_target[t] / 3600.0, decimals=2),
-             numpy.around(time_on_target[t] / surveytime, decimals=2),
+             numpy.around(time_on_target[t] / surveytime, decimals=5),
              numpy.around(target_ntiles_observed[t] * tile_area[t],
-                          decimals=2) if t != '-' else -999,
+                          decimals=5) if t != '-' else -999,
              numpy.around(float(target_ntiles_observed[t]) / float(target_ntiles[t]),
-                          decimals=2) if t != '-' else -999)
+                          decimals=5) if t != '-' else -999)
             for t in names]
 
         stats = astropy.table.Table(rows=rows,

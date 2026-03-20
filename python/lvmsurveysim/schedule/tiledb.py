@@ -23,10 +23,11 @@ import cycler
 import lvmsurveysim.target
 from lvmsurveysim import IFU, config
 from lvmsurveysim.target import Target
-from lvmsurveysim.exceptions import LVMSurveyOpsWarning
+from lvmsurveysim.exceptions import LVMSurveyOpsError, LVMSurveyOpsWarning
 import lvmsurveysim.utils.spherical
 # import lvmsurveysim.schedule.opsdb as opsdb
-from lvmsurveysim.utils import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
+from lvmsurveysim.utils.plot import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
+from lvmsurveysim.target.skyregion import SkyRegion
 
 numpy.seterr(invalid='raise')
 

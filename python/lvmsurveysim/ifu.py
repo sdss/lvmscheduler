@@ -13,7 +13,7 @@ import matplotlib.patches
 import matplotlib.pyplot
 import numpy
 import astropy.units
-from astropy.coordinates.angle_utilities import position_angle
+from astropy.coordinates.angles.utils import position_angle
 
 import lvmsurveysim
 from lvmsurveysim import config

@@ -226,8 +226,8 @@ class Scheduler(object):
         # avoid the zenith!
         alt_ok = (alt_start < (90 - self.zenith_avoidance)) & (alt_end < (90 - self.zenith_avoidance))
 
-        # avoid south pole for now
-        dec_ok = tdb['dec'] > -85.0
+        # avoid south and north poles for now
+        dec_ok = (tdb['dec'] > -85.0) & (tdb['dec'] < 85.0)
 
         # Gets valid airmasses (but we're working in altitude space)
         airmass_ok = ((alt_start > self.min_alt_for_target) & (alt_end > self.min_alt_for_target))

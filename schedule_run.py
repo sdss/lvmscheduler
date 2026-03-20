@@ -51,7 +51,7 @@ def run(targets='./targets.yaml', tile=False, sim=False, plot=False, save=False)
 
    return sim
 
-def plot_survey(sim, basename='APO_AS5', save=False):
+def plot_survey(sim, basename='LCO_2023_4', save=False):
    # Plot and print:
    sim.print_statistics()
    sim.plot_survey('LCO', use_groups=True)

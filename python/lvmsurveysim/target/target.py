@@ -20,9 +20,9 @@ import warnings
 
 from lvmsurveysim.ifu import IFU
 from lvmsurveysim.utils import plot as lvm_plot
-import lvmsurveysim.utils.spherical
+from lvmsurveysim.utils.spherical import great_circle_distance
 from lvmsurveysim.exceptions import LVMSurveyOpsWarning
-from lvmsurveysim.utils import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
+from lvmsurveysim.utils.plot import __MOLLWEIDE_ORIGIN__, get_axes, transform_patch_mollweide, convert_to_mollweide
 
 from .. import config
 from ..telescope import Telescope
@@ -378,7 +378,7 @@ class Target(object):
         # TODO: proper calculation of barycenter on the sphere!
         rc = numpy.average(r)
         dc = numpy.average(d)
-        dist = lvmsurveysim.utils.spherical.great_circle_distance(r, d, rc, dc)
+        dist = great_circle_distance(r, d, rc, dc)
         field = numpy.sqrt(self.get_pixarea() / numpy.pi)  # TODO: better way to get field size!!!
 
         p = numpy.floor(dist / field).astype(int)
