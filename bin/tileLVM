@@ -26,9 +26,14 @@ def tile(target_file):
 
 def write(table=None, path=None, target_file=None, version="forgot"):
     assert table or target_file, "must pass astropy table or path to target yaml"
+    if os.getenv("OBSERVATORY") == "LCO":
+        offset = OpsDB.max_tile_id() - 1e6
+    else:
+        offset = 0
     if not table:
         tiledb = tile(target_file)
         table = tiledb.tile_table
+        table["tile_id"] = table["tile_id"] + offset
         if path:
             tiledb.tile_table.write(path+'.fits', format='fits', overwrite=True)
     if os.getenv("OBSERVATORY") == "LCO":

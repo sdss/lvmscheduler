@@ -28,7 +28,7 @@ from sdssdb.peewee.lvmdb.lvmopsdb import (Tile, Sky, Standard, Observation,
                                           CompletionStatus, Dither, Exposure,
                                           ExposureFlavor, ObservationToStandard,
                                           ObservationToSky, Weather,
-                                          Version, Disabled)
+                                          Version, Disabled, Redo)
 
 
 class OpsDB(object):
@@ -66,6 +66,13 @@ class OpsDB(object):
 
         s = s2a.astropy2peewee(tile_table, Tile)
         return s
+
+    @classmethod
+    def max_tile_id(cls):
+        """return max tile_id, for loading new tiles"""
+
+        max_id = Tile.select(fn.max(Tile.tile_id)).scalar()
+        return max_id
 
     @classmethod
     def load_tiledb(cls, version=None):
@@ -190,6 +197,22 @@ class OpsDB(object):
         return None
 
     @classmethod
+    def load_redo(cls):
+        """
+        Grab tiles that can be redone and a list of re-done tiles
+        """
+
+        redo_q = Redo.select(Redo.tile, Redo.nexp).dicts()
+        redo_list = {r["tile"]: r["nexp"] for r in redo_q}
+
+        redo_obs_q = Dither.select(Dither.tile_id, fn.count(Observation.obs_id))\
+                            .join(Observation)\
+                           .group_by(Dither.tile_id).dicts()
+        redo_obs = {r["tile"]: r["count"] - 1 for r in redo_obs_q}
+
+        return redo_list, redo_obs
+
+    @classmethod
     def add_observation(cls, tile_id=None, exposure_no=None, 
                         dither=0, jd=0.0, exposure_time=900,
                         seeing=10.0, standards=[], skies=[],
@@ -204,8 +227,21 @@ class OpsDB(object):
         if tile_id is None:
             obs = None
         else:
-            dither_pos, created = Dither.get_or_create(tile_id=tile_id, position=dither)
-            dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
+            old = True
+            # hardcode 3 max for now, double check that
+            n = 1
+
+            tile = Tile.get(tile_id = tile_id)
+
+            nexp = tile.total_exptime / 900
+
+            while old and n < 3:
+                dither_pos, dither_created = Dither.get_or_create(tile_id=tile_id, position=dither)
+                dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
+                old = not created and dither_stat.done and nexp <= dither
+                dither += 9
+                n += 1
+
             CompletionStatus.update(done=True, by_pipeline=False).where(CompletionStatus.dither == dither_pos).execute()
 
             obs = Observation.create(dither=dither_pos,
@@ -214,7 +250,7 @@ class OpsDB(object):
                                      hz=hz,
                                      alt=alt,
                                      lunation=lunation)
-            
+
             Weather.create(obs_id=obs.obs_id, seeing=seeing)
 
         sciece_flavor = ExposureFlavor.get(label="Science")

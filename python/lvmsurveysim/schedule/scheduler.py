@@ -257,27 +257,38 @@ class Scheduler(object):
         # If there's nothing to observe, return -1
         if len(valid_idx) == 0:
             valid_idx = np.where(np.logical_and(valid_mask, tdb["target"] == "FULLSKY"))[0]
+            if len(valid_idx) > 0:
+                ignore_hz = hz[valid_idx]
+                max_hz_idx = np.argmax(ignore_hz)
+
+                observed_idx = valid_idx[max_hz_idx]
+
+                self.logMsg += f"{time_formatted} shadow height ignored, "
+                self.logMsg += f"max hz {hz[observed_idx]:.1f}, "
+                self.logMsg += f"max alt {alt_start[observed_idx]:.1f}, "
+                self.logMsg += f"tile_id {tdb['tile_id'].data[observed_idx]} \n"
+                with open(self.logFile, "a") as logging:
+                    print(self.logMsg, file=logging)
+
+                return observed_idx, lst, hz[observed_idx], alt_start[observed_idx], self.lunation
+            else:
+                valid_mask = alt_ok & self.moon_ok & airmass_ok & dec_ok
+                valid_idx = np.where(valid_mask & hz_ok)[0]
+                if len(valid_idx) == 0:
+                    valid_idx = np.where(valid_mask)[0]
+                    self.logMsg += f"{time_formatted} ignoring shadow height \n"
+                self.logMsg += f"{time_formatted} allowed reobserving done tiles"
+                with open(self.logFile, "a") as logging:
+                    print(self.logMsg, file=logging)
             if len(valid_idx) == 0:
-                self.logMsg += f"{time_formatted} nothing observable"
+                # valid_sky = np.where(alt_ok & self.moon_ok & airmass_ok & dec_ok)[0]
+                # print(f"{time_formatted} No valid targets, {len(valid_sky)} observable but done")
+                self.logMsg += f"{time_formatted} nothing observable "
                 self.logMsg += f"max hz {np.max(hz):.1f}, "
                 self.logMsg += f"max alt {np.max(alt_start):.1f} \n"
                 with open(self.logFile, "a") as logging:
                     print(self.logMsg, file=logging)
                 return -1, lst, 0, 0, self.lunation
-
-            ignore_hz = hz[valid_idx]
-            max_hz_idx = np.argmax(ignore_hz)
-
-            observed_idx = valid_idx[max_hz_idx]
-
-            self.logMsg += f"{time_formatted} shadow height ignored, "
-            self.logMsg += f"max hz {hz[observed_idx]:.1f}, "
-            self.logMsg += f"max alt {alt_start[observed_idx]:.1f}, "
-            self.logMsg += f"tile_id {tdb['tile_id'].data[observed_idx]} \n"
-            with open(self.logFile, "a") as logging:
-                print(self.logMsg, file=logging)
-
-            return observed_idx, lst, hz[observed_idx], alt_start[observed_idx], self.lunation
 
         # Find observations that have nonzero exposure but are incomplete
         incomplete = (observed > 0) & (~done)
@@ -415,24 +426,36 @@ class Atomic(object):
             self.scheduler.get_optimal_tile(jd, self.history)
 
         if idx == -1:
-            return -999, -1, [-999, -999, -999]
+            return -999, -1, [-999, -999, -999], False, False
 
         tdb = self.tiledb
 
         tile_id = tdb['tile_id'].data[idx]
         exptime = tdb['total_exptime'].data[idx]
         pos = [tdb['ra'].data[idx], tdb['dec'].data[idx], tdb['pa'].data[idx]]
+
+        done = bool(self.history[idx] >= exptime)
+
+        ancillary = "ancillary" in tdb['target'].data[idx]
+
         if exptime == 900:
-            return tile_id, [0], pos
+            return tile_id, [0], pos, done, ancillary
         done_pos = OpsDB.retrieve_tile_dithers(tile_id)
 
-        all_dithers = set([0, 1, 2, 3, 4, 5, 6, 7, 8])
+        if done:
+            next_dither = [int(n) for n in np.random.choice([i for i in range(9)],
+                                                            size=3,
+                                                            replace=False)]
+            return tile_id, next_dither, pos, False, ancillary
+
+        all_dithers = set([i for i in range(int(exptime / 900))])
 
         remain_dither = sorted(all_dithers.difference(done_pos))
+        remain_dither = [r % 9 for r in remain_dither]
 
         next_dither = remain_dither[:3]
 
-        return tile_id, next_dither, pos
+        return tile_id, next_dither, pos, False, ancillary
 
 
 class Cals(object):
