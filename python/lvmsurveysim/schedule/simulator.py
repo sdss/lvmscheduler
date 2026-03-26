@@ -54,7 +54,7 @@ class Simulator(object):
         the index of the pointing in the target tiling, coordinates, etc.
     """
 
-    def __init__(self, tiledb, observing_plan=None, ifu=None):
+    def __init__(self, tiledb, observing_plan=None, ifu=None, reobserving_allowed=True):
 
         assert isinstance(tiledb, lvmsurveysim.schedule.tiledb.TileDB), \
             'tiledb must be a lvmsurveysim.schedule.tiledb.TileDB instances.'
@@ -75,7 +75,7 @@ class Simulator(object):
         self.tiledb = tiledb
         self.targets = tiledb.targets
         self.ifu = ifu or IFU.from_config()
-
+        self.reobserving_allowed = reobserving_allowed
         self.schedule = None
 
     def __repr__(self):
@@ -211,7 +211,9 @@ class Simulator(object):
         while current_jd < scheduler.morning_twi:
 
             # obtain the next tile to observe
-            observed_idx, current_lst, hz, alt, lunation = scheduler.get_optimal_tile(current_jd, observed)
+            observed_idx, current_lst, hz, alt, lunation = scheduler.get_optimal_tile(current_jd, observed,
+                                                                                      reobserving_allowed=
+                                                                                      self.reobserving_allowed)
             if observed_idx == -1:
                 # nothing available
                 self._record_observation(current_jd, self.observing_plan.observatory,

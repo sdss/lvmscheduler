@@ -153,7 +153,7 @@ class Scheduler(object):
         self.logMsg = ""
         self.logFile = os.path.join(logDir, f"{int(jd-2400000.5)}_sched.log")
 
-    def get_optimal_tile(self, jd, observed, done=None):
+    def get_optimal_tile(self, jd, observed, done=None, reobserving_allowed=False):
         """Returns the next tile to observe at a given (float) jd.
 
         jd must be between the times of evening and morning twilight on the id
@@ -186,6 +186,9 @@ class Scheduler(object):
         done : np.array
             Same length as len(tiledb).
             Array containing boolean done or not per tile
+
+        reobserving_allowed : bool
+            If True, allow reobserving tiles that are already done.
 
         Returns
         -------
@@ -271,7 +274,7 @@ class Scheduler(object):
                     print(self.logMsg, file=logging)
 
                 return observed_idx, lst, hz[observed_idx], alt_start[observed_idx], self.lunation
-            else:
+            elif reobserving_allowed:
                 valid_mask = alt_ok & self.moon_ok & airmass_ok & dec_ok
                 valid_idx = np.where(valid_mask & hz_ok)[0]
                 if len(valid_idx) == 0:
