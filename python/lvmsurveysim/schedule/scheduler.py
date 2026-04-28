@@ -27,7 +27,9 @@ if os.getenv("OBSERVATORY") == "LCO":
     from lvmsurveysim.schedule.opsdb import OpsDB
     logDir = "/data/logs/lvmscheduler/"
 else:
-    logDir = ""
+    logDir = "lvmsimulator_logs/"
+    if not os.path.exists(logDir):
+        os.makedirs(logDir)
 
 np.seterr(invalid='raise')
 
