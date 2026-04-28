@@ -57,12 +57,12 @@ def get_sun_moon_data(jd, location=None):
     # Earth-Sun distance (1 AU)
     edist = 1.49598e8
 
-    mpos = astropy.coordinates.get_moon(times, location=location)
+    mpos = astropy.coordinates.get_body("Moon", times, location=location)
     ram = mpos.ra.deg * numpy.pi / 180.
     decm = mpos.dec.deg * numpy.pi / 180.
     dism = mpos.distance.km
 
-    spos = astropy.coordinates.get_sun(times)
+    spos = astropy.coordinates.get_body("Sun", times, location=location)
     ras = spos.ra.deg * numpy.pi / 180.
     decs = spos.dec.deg * numpy.pi / 180.
 
