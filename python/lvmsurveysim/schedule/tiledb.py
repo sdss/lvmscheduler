@@ -280,7 +280,7 @@ class TileDB(object):
         # All the coordinates and position angles
         ra = numpy.concatenate([[t.coords.ra.deg for t in self.tiles[idx]] for idx in s])
         dec = numpy.concatenate([[t.coords.dec.deg for t in self.tiles[idx]] for idx in s])
-        tile_pa = numpy.concatenate([[t.pa.deg for t in self.tiles[idx]] for idx in s])
+        tile_pa = numpy.concatenate([[t.pa for t in self.tiles[idx]] for idx in s])
 
         # Create an array of the target's priority for each pointing
         target_prio = numpy.concatenate([numpy.repeat(self.targets[idx].priority, len(self.tiles[idx])) for idx in s])
