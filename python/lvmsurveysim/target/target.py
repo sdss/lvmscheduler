@@ -285,7 +285,7 @@ class Target(object):
                                        tile_overlap=self.tile_overlap, sparse=self.sparse, geodesic=self.geodesic)
         # convert to skycoords and optionally transform in to the requested frame, most likely 'icrs'
         tiles, pa2 = self.transform_skycoords(coords[:, 0], coords[:, 1], unit='deg', to_frame=to_frame)
-        self.pa = pa + pa2
+        self.pa = pa + pa2.value
 
         # cache the new tiles and the priorities
         self.tiles = tiles

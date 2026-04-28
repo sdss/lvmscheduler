@@ -13,7 +13,7 @@ import matplotlib.patches
 import matplotlib.pyplot
 import numpy
 import astropy.units
-from astropy.coordinates.angle_utilities import position_angle
+from astropy.coordinates import angular_separation
 
 import lvmsurveysim
 from lvmsurveysim import config
@@ -135,7 +135,7 @@ def transform_coords(lat, lon, transform):
     '''
     lat2, lon2 = transform(lat, lon + 1./3600.)
     lat1, lon1 = transform(lat, lon)
-    pa = position_angle(numpy.deg2rad(lat1), numpy.deg2rad(lon1), numpy.deg2rad(lat2), numpy.deg2rad(lon2))
+    pa = angular_separation(numpy.deg2rad(lat1), numpy.deg2rad(lon1), numpy.deg2rad(lat2), numpy.deg2rad(lon2))
     return numpy.array([lat1, lon1]).T, numpy.rad2deg(pa)
 
 
@@ -500,6 +500,8 @@ class IFU(object):
             # The size of the grid in phi and theta, in degrees.
             size_phi  = numpy.abs(maxphi - minphi) * numpy.cos(numpy.radians(centroid[1]))
             size_theta = numpy.abs(maxtheta - mintheta)
+            size_phi = size_phi[0]
+            size_theta = size_theta[0]
 
             # The separation between grid points in angles (phi ~ RA/lon, theta ~ DEC/lat)
             delta_phi = ifu_phi_size*2.0
