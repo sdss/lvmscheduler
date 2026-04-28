@@ -175,9 +175,9 @@ class Simulator(object):
         # Convert schedule to Astropy Table.
         self.schedule = astropy.table.Table(
             rows=self.schedule,
-            names=['JD', 'observatory', 'target', 'group', 'tileid', 'index', 'ra', 'dec', 'pa', 
+            names=['JD', 'observatory', 'target', 'group', 'tileid', 'index', 'ra', 'dec', 'pa',
                 'airmass', 'lunation', 'shadow_height', "moon_dist", 'lst', 'exptime', 'totaltime'],
-            dtype=[float, 'S10', 'S20', 'S20', int, int, float, float, float, 
+            dtype=[float, 'S10', 'S45', 'S20', int, int, float, float, float,
                    float, float, float, float, float, float, float])
 
 

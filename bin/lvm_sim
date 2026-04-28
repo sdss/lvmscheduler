@@ -28,7 +28,8 @@ def runSim(target_file, readFits=None, writeFits=None, outdir=None):
                                     overwrite=True)
     
     # Creates observing plans for LCO for the range sep 2021 - jun 2025.
-    lco_plan = ObservingPlan(2459458, 2460856, observatory='LCO') # baseline
+    # lco_plan = ObservingPlan(2459458, 2460856, observatory='LCO') # baseline
+    lco_plan = ObservingPlan(2460200, 2461668, observatory='LCO') # baseline
 
     # Creates an Simulator instance and runs the simulation
     sim = Simulator(tiledb, observing_plan=lco_plan)

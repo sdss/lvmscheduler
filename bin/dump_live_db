@@ -1,0 +1,8 @@
+#! /usr/bin/env python
+
+from lvmsurveysim.schedule.opsdb import OpsDB
+
+livedb = OpsDB.load_tiledb()
+hist = OpsDB.load_history(tile_ids=livedb["tile_id"])
+livedb.add_column(hist, name="history")
+livedb.write("livedb.fits", format="fits", overwrite=True)
