@@ -55,7 +55,7 @@ class Simulator(object):
         the index of the pointing in the target tiling, coordinates, etc.
     """
 
-    def __init__(self, tiledb, observing_plan=None, ifu=None):
+    def __init__(self, tiledb, observing_plan=None, ifu=None, hist=None):
 
         assert isinstance(tiledb, lvmsurveysim.schedule.tiledb.TileDB), \
             'tiledb must be a lvmsurveysim.schedule.tiledb.TileDB instances.'
@@ -78,6 +78,7 @@ class Simulator(object):
         self.ifu = ifu or IFU.from_config()
 
         self.schedule = None
+        self.hist = hist
 
     def __repr__(self):
         return (f'<Simulator (observing_plan={self.observing_plan.observatory}, '
@@ -150,8 +151,45 @@ class Simulator(object):
         # observed exposure time for each pointing
         observed = numpy.zeros(len(self.tiledb.tile_table), dtype=float)
 
+        if self.hist is not None:
+            hist = astropy.table.Table.read(self.hist+".fits")
+            tdb = self.tiledb.tile_table
+            for h in hist:
+                tidx = numpy.where(tdb['tile_id'].data == h["tile_id"])[0]
+                if len(tidx) == 0:
+                    # it's a disabled tile, edge case, ignore it
+                    continue
+                tidx = tidx[0]
+                observed[tidx] += 900
+                target_index = tdb['target_index'].data[tidx]
+                target_name = self.targets[target_index].name
+                groups = self.targets[target_index].groups
+                target_group = groups[0] if groups else 'None'
+                target_overhead = self.targets[target_index].overhead
+                target_index_first = numpy.nonzero(tdb['target_index'].data == target_index)[0][0]
+                pointing_index = tidx - target_index_first
+                secz = numpy.cos((90 - h["alt"]) * numpy.pi / 180)**-1
+                self._record_observation(h['jd'], 'LCO',
+                                         target_name=target_name,
+                                         target_group=target_group,
+                                         tileid = h["tile_id"],
+                                         pointing_index=pointing_index,
+                                         ra=tdb['ra'].data[tidx],
+                                         dec=tdb['dec'].data[tidx],
+                                         pa=tdb['pa'].data[tidx],
+                                         airmass=secz,
+                                         lunation=h['lunation'],
+                                         shadow_height= h['hz'],
+                                         dist_to_moon=5,
+                                         lst=h['lst'],
+                                         exptime=900,
+                                         totaltime=900 * target_overhead)
+            begin_jd = int(numpy.max(hist["jd"]) + 1)
+        else: 
+            begin_jd = plan['JD']
+
         # range of dates for the survey
-        min_date = numpy.min(plan['JD'])
+        min_date = numpy.min(begin_jd)
         max_date = numpy.max(plan['JD'])
         dates = range(min_date, max_date + 1)
 

@@ -10,7 +10,7 @@ from lvmsurveysim.target import TargetList
 import matplotlib.pyplot as plt
 
 
-def runSim(target_file, readFits=None, writeFits=None, outdir=None):
+def runSim(target_file, readFits=None, writeFits=None, outdir=None, hist=None):
     # Creates a list of targets/
     targets = TargetList(target_file=target_file)
 
@@ -32,7 +32,7 @@ def runSim(target_file, readFits=None, writeFits=None, outdir=None):
     lco_plan = ObservingPlan(2460200, 2461668, observatory='LCO') # baseline
 
     # Creates an Simulator instance and runs the simulation
-    sim = Simulator(tiledb, observing_plan=lco_plan)
+    sim = Simulator(tiledb, observing_plan=lco_plan, hist=hist)
 
     # Run the simulation
     sim.run(progress_bar=True)
@@ -42,6 +42,7 @@ def runSim(target_file, readFits=None, writeFits=None, outdir=None):
 
     if not outdir:
         outdir = ""
+    sim.save(path=os.path.join(outdir, "lvmsim"), overwrite=True)
     fig = sim.plot_survey('LCO', use_groups=True)
     fig.savefig(os.path.join(outdir, "figure1.pdf"))
     fig = sim.plot_survey('LCO', use_groups=True, cumulative=True)
@@ -70,13 +71,17 @@ if __name__ == "__main__":
                         default=None)
     parser.add_argument("-o", "--out", dest="out", type=str,
                         required=False, help="output dir for figs",
-                        default=None)    
+                        default=None)
+    parser.add_argument("--hist", dest="hist", type=str,
+                        required=False, help="history file",
+                        default=None)
 
     args = parser.parse_args()
     target = args.target
     readFits = args.readFits
     writeFits = args.writeFits
     outdir = args.out
+    hist = args.hist
 
     if not target:
         prod_dir = os.path.abspath(__file__).split("/bin/lvm_sim")[0]
@@ -88,4 +93,4 @@ if __name__ == "__main__":
         if not os.path.isdir(outdir):
             os.mkdir(outdir)
 
-    runSim(target_file, readFits=readFits, writeFits=writeFits, outdir=outdir)
+    runSim(target_file, readFits=readFits, writeFits=writeFits, outdir=outdir, hist=hist)
