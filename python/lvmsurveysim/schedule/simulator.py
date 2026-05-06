@@ -455,7 +455,6 @@ class Simulator(object):
 
         column = 'group' if group is True else 'target'
         t = self.schedule[self.schedule[column] == tname]
-        print(t['observatory'], observatory)
         if observatory:
             t = t[t['observatory'] == observatory]
 
