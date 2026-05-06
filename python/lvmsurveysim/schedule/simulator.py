@@ -204,6 +204,9 @@ class Simulator(object):
         # initialize the scheduler for the night
         scheduler.prepare_for_night(jd, self.observing_plan, tdb)
 
+        night_plan = self.observing_plan[self.observing_plan['JD'] == jd]
+        clear_frac = night_plan['is_clear'][0]
+
         # begin at twilight
         current_jd = scheduler.evening_twi
 
@@ -262,7 +265,8 @@ class Simulator(object):
                                         exptime=exptime,
                                         totaltime=exptime * target_overhead)
 
-            current_jd += exptime * target_overhead / 86400.0
+            # modifying target_overhead here to account for the partially clear nights
+            current_jd += exptime * (target_overhead/clear_frac) / 86400.0
 
 
     def animate_survey(self, filename='lvm_survey.mp4', step=100,

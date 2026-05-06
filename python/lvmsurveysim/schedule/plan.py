@@ -20,6 +20,7 @@ import astropy.coordinates
 from astropy.utils.data import clear_download_cache
 
 import numpy
+import os
 
 from lvmsurveysim import config
 
@@ -99,9 +100,11 @@ class ObservingPlan(object):
         The altitude in degrees at which to consider that the twilight has
         began or finished. A positive value although it corresponds to a
         depression below the horizon.
-    good_weather : float
-        The fraction of good weather nights. Nights with bad weather will be
+    good_weather : float or str
+        If float: The fraction of good weather nights. Nights with bad weather will be
         randomised and indicated in the plan.
+        If string: The path to the file with detailed yearly statistics for the number of clear hours per night.
+        This exact value will be used in the plan
 
     Attributes
     ----------
@@ -191,10 +194,27 @@ class ObservingPlan(object):
             sunpos, moonpos, moonphase = get_sun_moon_data(astropy.time.Time(midnight, format='jd'))
 
         # Calculate clear nights
-        if good_weather >= 1:
-            is_clear = numpy.ones(len(jds), dtype=int)
-        else:
-            is_clear = numpy.random.binomial(1, good_weather, size=len(jds))
+        if isinstance(good_weather, str):
+            try:
+                data_weather = numpy.loadtxt(good_weather)
+                clear_sky_stat = numpy.zeros(365, dtype=float)
+                clear_sky_stat[data_weather[:, 0].astype(int)-1] = data_weather[:, 1]
+                jd0 = astropy.time.Time(f"{start_date.datetime.year}-01-01 00:00:00").jd
+                is_clear = numpy.array([numpy.clip(clear_sky_stat[((jd-jd0) % 365).astype(int)]/
+                            (twilights_jd[jd_id, 1] - twilights_jd[jd_id, 0])/24., 0.0, 1.0) for
+                                        jd_id, jd in enumerate(jds)])
+            except (FileNotFoundError, ValueError, TypeError):
+                warnings.warn("Something wrong with the yearly weather statistics; "
+                              f"I'll use default good_weather from the config: "
+                              f"{config['observing_plan'][observatory]['good_weather']}",
+                              RuntimeWarning)
+                good_weather = config['observing_plan'][observatory]['good_weather']
+
+        if isinstance(good_weather, float) or isinstance(good_weather, int):
+            if good_weather >= 1:
+                is_clear = numpy.ones(len(jds), dtype=int)
+            else:
+                is_clear = numpy.random.binomial(1, good_weather, size=len(jds))
 
         self.data = astropy.table.Table(
             data=[jds, twilights_jd[:, 0], twilights_jd[:, 1],
