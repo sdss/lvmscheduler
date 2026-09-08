@@ -238,7 +238,7 @@ class OpsDB(object):
             while old and n < 3:
                 dither_pos, dither_created = Dither.get_or_create(tile_id=tile_id, position=dither)
                 dither_stat, created = CompletionStatus.get_or_create(dither=dither_pos)
-                old = not created and dither_stat.done and nexp <= dither
+                old = not created and dither_stat.done and nexp >= dither
                 dither += 9
                 n += 1
 
